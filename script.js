@@ -173,7 +173,7 @@ function focusOnNode(id) {
 }
 
 // ==========================================
-// CÁC HÀM VẼ PHẢ ĐỒ (RẼ NHÁNH TỪ TRÁI SANG PHẢI)
+// CÁC HÀM VẼ PHẢ ĐỒ (THEO ĐỘ SÂU THỰC TẾ)
 // ==========================================
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
@@ -204,30 +204,29 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
     
-    // Đảo trục: distanceX là khoảng cách Thế hệ (cột ngang), distanceY là khoảng cách Anh chị em (hàng dọc)
     const distanceX = 400; 
     const distanceY = 70; 
     const INITIAL_X = 50;
     const INITIAL_Y = 50;
 
-    const layoutSubtree = (personId, currentGen) => {
-        const subPos = { [personId]: { x: currentGen * distanceX + INITIAL_X, y: 0 } };
-        const subContours = { [currentGen]: { min: 0, max: 0 } };
+    // Biến depth là độ sâu cây, không phụ thuộc vào thuộc tính Generation của người dùng
+    const layoutSubtree = (personId, depth) => {
+        const subPos = { [personId]: { x: depth * distanceX + INITIAL_X, y: 0 } };
+        const subContours = { [depth]: { min: 0, max: 0 } };
         const children = childrenMap[personId] || [];
         if (children.length === 0) return { positions: subPos, contours: subContours };
 
-        const childrenLayouts = children.map(child => layoutSubtree(child.ID, currentGen + 1));
+        const childrenLayouts = children.map(child => layoutSubtree(child.ID, depth + 1));
         const packedChildrenPos = {};
         const cumulativeContours = {};
 
         childrenLayouts.forEach((childLayout, index) => {
             let shift = 0;
             if (index > 0) {
-                Object.keys(childLayout.contours).forEach(genStr => {
-                    const gen = parseInt(genStr, 10);
-                    if (cumulativeContours[gen] && childLayout.contours[gen]) {
-                        // Tính toán độ lùi chống chồng lấp theo trục Y
-                        const overlapShift = cumulativeContours[gen].max + distanceY - childLayout.contours[gen].min;
+                Object.keys(childLayout.contours).forEach(depthStr => {
+                    const d = parseInt(depthStr, 10);
+                    if (cumulativeContours[d] && childLayout.contours[d]) {
+                        const overlapShift = cumulativeContours[d].max + distanceY - childLayout.contours[d].min;
                         if (overlapShift > shift) shift = overlapShift;
                     }
                 });
@@ -235,15 +234,15 @@ function calculatePositions(people) {
             Object.keys(childLayout.positions).forEach(id => {
                 packedChildrenPos[id] = { x: childLayout.positions[id].x, y: childLayout.positions[id].y + shift };
             });
-            Object.keys(childLayout.contours).forEach(genStr => {
-                const gen = parseInt(genStr, 10);
-                const minVal = childLayout.contours[gen].min + shift;
-                const maxVal = childLayout.contours[gen].max + shift;
-                if (!cumulativeContours[gen]) {
-                    cumulativeContours[gen] = { min: minVal, max: maxVal };
+            Object.keys(childLayout.contours).forEach(depthStr => {
+                const d = parseInt(depthStr, 10);
+                const minVal = childLayout.contours[d].min + shift;
+                const maxVal = childLayout.contours[d].max + shift;
+                if (!cumulativeContours[d]) {
+                    cumulativeContours[d] = { min: minVal, max: maxVal };
                 } else {
-                    cumulativeContours[gen].min = Math.min(cumulativeContours[gen].min, minVal);
-                    cumulativeContours[gen].max = Math.max(cumulativeContours[gen].max, maxVal);
+                    cumulativeContours[d].min = Math.min(cumulativeContours[d].min, minVal);
+                    cumulativeContours[d].max = Math.max(cumulativeContours[d].max, maxVal);
                 }
             });
         });
@@ -256,15 +255,15 @@ function calculatePositions(people) {
         Object.keys(packedChildrenPos).forEach(id => {
             subPos[id] = { x: packedChildrenPos[id].x, y: packedChildrenPos[id].y + childrenShift };
         });
-        Object.keys(cumulativeContours).forEach(genStr => {
-            const gen = parseInt(genStr, 10);
-            const minVal = cumulativeContours[gen].min + childrenShift;
-            const maxVal = cumulativeContours[gen].max + childrenShift;
-            if (!subContours[gen]) {
-                subContours[gen] = { min: minVal, max: maxVal };
+        Object.keys(cumulativeContours).forEach(depthStr => {
+            const d = parseInt(depthStr, 10);
+            const minVal = cumulativeContours[d].min + childrenShift;
+            const maxVal = cumulativeContours[d].max + childrenShift;
+            if (!subContours[d]) {
+                subContours[d] = { min: minVal, max: maxVal };
             } else {
-                subContours[gen].min = Math.min(subContours[gen].min, minVal);
-                subContours[gen].max = Math.max(subContours[gen].max, maxVal);
+                subContours[d].min = Math.min(subContours[d].min, minVal);
+                subContours[d].max = Math.max(subContours[d].max, maxVal);
             }
         });
         return { positions: subPos, contours: subContours };
@@ -274,16 +273,16 @@ function calculatePositions(people) {
     let currentGlobalShift = INITIAL_Y;
 
     roots.forEach((root, index) => {
-        const rootGen = root.Generation || 1;
-        const rootLayout = layoutSubtree(root.ID, rootGen);
+        // LUÔN BẮT ĐẦU VẼ CỤ TỔ Ở CỘT SỐ 0, không quan tâm cụ được dán nhãn Generation số mấy
+        const rootLayout = layoutSubtree(root.ID, 0); 
         let shift = currentGlobalShift;
 
         if (index > 0) {
             let maxOverlapShift = currentGlobalShift;
-            Object.keys(rootLayout.contours).forEach(genStr => {
-                const gen = parseInt(genStr, 10);
-                if (globalContours[gen] && rootLayout.contours[gen]) {
-                    const neededShift = globalContours[gen].max + distanceY - rootLayout.contours[gen].min;
+            Object.keys(rootLayout.contours).forEach(depthStr => {
+                const d = parseInt(depthStr, 10);
+                if (globalContours[d] && rootLayout.contours[d]) {
+                    const neededShift = globalContours[d].max + distanceY - rootLayout.contours[d].min;
                     if (neededShift > maxOverlapShift) maxOverlapShift = neededShift;
                 }
             });
@@ -299,18 +298,18 @@ function calculatePositions(people) {
         Object.keys(rootLayout.positions).forEach(id => {
             pos[id] = { x: rootLayout.positions[id].x, y: rootLayout.positions[id].y + shift };
         });
-        Object.keys(rootLayout.contours).forEach(genStr => {
-            const gen = parseInt(genStr, 10);
-            const minVal = rootLayout.contours[gen].min + shift;
-            const maxVal = rootLayout.contours[gen].max + shift;
-            if (!globalContours[gen]) {
-                globalContours[gen] = { min: minVal, max: maxVal };
+        Object.keys(rootLayout.contours).forEach(depthStr => {
+            const d = parseInt(depthStr, 10);
+            const minVal = rootLayout.contours[d].min + shift;
+            const maxVal = rootLayout.contours[d].max + shift;
+            if (!globalContours[d]) {
+                globalContours[d] = { min: minVal, max: maxVal };
             } else {
-                globalContours[gen].min = Math.min(globalContours[gen].min, minVal);
-                globalContours[gen].max = Math.max(globalContours[gen].max, maxVal);
+                globalContours[d].min = Math.min(globalContours[d].min, minVal);
+                globalContours[d].max = Math.max(globalContours[d].max, maxVal);
             }
         });
-        if (globalContours[rootGen]) currentGlobalShift = globalContours[rootGen].max + distanceY;
+        if (globalContours[0]) currentGlobalShift = globalContours[0].max + distanceY;
     });
 
     return pos;
