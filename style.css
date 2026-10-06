@@ -18,7 +18,7 @@
 
 /* Trang trí nút tải file */
 .upload-btn {
-    background-color: #4CAF50;
+    background-color: #60d3f7;
     color: white;
     padding: 15px 30px;
     font-size: 18px;
@@ -30,7 +30,7 @@
 }
 
 .upload-btn:hover {
-    background-color: #45a049;
+    background-color: #ade4f5;
 }
 
 /* Tạm thời trang trí thanh công cụ ở giao diện chính */
