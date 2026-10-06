@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phả Đồ Gia Tộc</title>
+    <!-- Liên kết đến file CSS -->
+    <link rel="stylesheet" href="style.css">
+    <!-- Liên kết đến thư viện xuất PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+
+    <!-- PHẦN 1: Màn hình khởi đầu (Chỉ có nút tải file) -->
+    <div id="startScreen" class="fullscreen-center">
+        <!-- Input file bị ẩn đi, ta dùng label để làm thành một nút bấm đẹp mắt -->
+        <input type="file" id="jsonInput" accept=".json" style="display: none;">
+        <label for="jsonInput" class="upload-btn">Nhập file JSON</label>
+    </div>
+
+    <!-- PHẦN 2: Không gian vẽ phả đồ (Ban đầu bị ẩn) -->
+    <div id="mainWorkspace" style="display: none;">
+        <div id="toolbar">
+            <button onclick="window.location.reload()">Làm mới trang</button>
+            <span id="statusText">Đã tải dữ liệu thành công!</span>
+            
+            <!-- Khung tìm kiếm -->
+            <div id="searchBox" style="position: relative; display: flex; gap: 10px; align-items: center;">
+                <div style="position: relative;">
+                    <input type="text" id="searchInput" placeholder="Nhập tên cần tìm..." autocomplete="off">
+                    <!-- Danh sách gợi ý xổ xuống -->
+                    <ul id="searchResults" class="search-results-container"></ul>
+                </div>
+                <button onclick="resetView()">Về trung tâm</button>
+                <!-- Thêm nút Xuất PDF -->
+                <button id="exportBtn" onclick="exportPDF()" style="background-color: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 4px; font-weight: bold;">Xuất PDF</button>
+            </div>
+        </div>
+        
+        <!-- Canvas khổ A0 (3177px x 4492px) -->
+        <div id="canvasContainer">
+            <div id="canvasArea">
+                <!-- Lớp SVG dùng để vẽ các đường nối giữa các thẻ -->
+                <svg id="connectionLines" width="100%" height="100%"></svg>
+                
+                <!-- Nơi chứa các thẻ thông tin (Node) -->
+                <div id="nodesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHUNG HIỂN THỊ CHI TIẾT (Ban đầu bị ẩn) -->
+    <div id="detailsModal"></div>
+
+    <!-- Liên kết đến file JavaScript -->
+    <script src="script.js"></script>
+</body>
+</html>

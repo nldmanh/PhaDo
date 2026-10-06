@@ -1,0 +1,276 @@
+/* Reset định dạng mặc định của trình duyệt */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+/* Đưa phần tử ra giữa màn hình */
+.fullscreen-center {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f4f4f9;
+}
+
+/* Trang trí nút tải file */
+.upload-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: background-color 0.3s;
+}
+
+.upload-btn:hover {
+    background-color: #45a049;
+}
+
+/* Tạm thời trang trí thanh công cụ ở giao diện chính */
+#toolbar {
+    padding: 15px;
+    background-color: #333;
+    color: white;
+    display: flex;
+    gap: 15px;
+}
+
+#toolbar button {
+    padding: 5px 15px;
+    cursor: pointer;
+}
+
+/* --- KHÔNG GIAN CANVAS --- */
+#canvasContainer {
+    width: 100vw; /* Chiếm toàn bộ chiều rộng màn hình */
+    height: calc(100vh - 60px); /* Trừ đi chiều cao của thanh toolbar */
+    overflow: auto; /* Tạo thanh cuộn nếu nội dung lớn hơn màn hình */
+    background-color: #e9ecef;
+    position: relative;
+}
+
+#canvasArea {
+    /* Kích thước khổ A0 (ngang) ở độ phân giải 96dpi */
+    width: 4492px; 
+    height: 3177px;
+    background-color: white;
+    position: relative; /* Để các thẻ bên trong có thể định vị tuyệt đối */
+    margin: 20px; /* Cách lề một chút cho đẹp */
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+#connectionLines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none; /* Tránh SVG chặn các click chuột vào thẻ */
+    z-index: 1; /* Nằm dưới các thẻ thông tin */
+}
+
+#nodesContainer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2; /* Nằm trên lớp SVG */
+}
+
+/* --- THIẾT KẾ THẺ THÔNG TIN (NODE) --- */
+.person-node {
+    position: absolute; /* Định vị theo tọa độ tính toán trong JS */
+    border: 2px solid #333;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    min-width: 150px;
+    text-align: center;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.person-node:hover {
+    transform: scale(1.05); /* Phóng to nhẹ khi đưa chuột vào */
+    border-color: #007bff;
+}
+
+/* Định dạng Tên */
+.node-name {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 5px;
+}
+
+/* Màu sắc theo giới tính */
+.gender-male { color: black; }
+.gender-female { color: red; }
+
+/* Định dạng Vợ/Chồng */
+.node-spouse {
+    font-size: 14px;
+    color: #555;
+    font-style: italic;
+    border-top: 1px dashed #ccc;
+    padding-top: 5px;
+    margin-top: 5px;
+}
+
+/* --- CỬA SỔ THÔNG TIN CHI TIẾT (THEO REACT PROJECT) --- */
+#detailsModal {
+    display: none;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    width: 450px;
+    max-width: 90%;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.modal-content h2 {
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 15px;
+}
+
+.form-row .form-group {
+    margin-bottom: 0; /* Xóa margin dưới nếu nằm trong hàng ngang */
+}
+
+.form-group label {
+    font-weight: bold;
+    font-size: 14px;
+    margin-bottom: 5px;
+    color: #555;
+}
+
+.form-group input, .form-group textarea {
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-family: inherit;
+    background: #f5f5f5; /* Màu nền xám cho readonly */
+    color: #333;
+    cursor: default; /* Trỏ chuột mặc định */
+}
+
+.form-group textarea {
+    resize: vertical; /* Chỉ cho phép kéo dọc */
+}
+
+/* --- CÔNG CỤ TÌM KIẾM & ZOOM/PAN --- */
+#searchBox {
+    margin-left: auto; /* Đẩy khung tìm kiếm sang bên phải toolbar */
+    display: flex;
+    gap: 10px;
+}
+
+#searchInput {
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    width: 200px;
+}
+
+/* Ẩn thanh cuộn mặc định để dùng chuột kéo thả */
+#canvasContainer {
+    overflow: hidden; 
+    cursor: grab; /* Thay đổi con trỏ chuột thành hình bàn tay */
+}
+
+#canvasContainer:active {
+    cursor: grabbing; /* Đổi biểu tượng khi đang giữ chuột */
+}
+
+#canvasArea {
+    transform-origin: 0 0; /* Điểm gốc của thao tác thu phóng */
+}
+
+/* Hiệu ứng làm nổi bật khi tìm thấy người */
+.person-node.highlighted {
+    border: 3px solid #ff9800;
+    box-shadow: 0 0 25px rgba(255, 152, 0, 0.9);
+    z-index: 10;
+}
+
+/* --- DANH SÁCH GỢI Ý TÌM KIẾM --- */
+.search-results-container {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 250px;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    max-height: 300px;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    display: none; /* Ẩn mặc định */
+    z-index: 1000;
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0 0;
+}
+
+.search-results-container li {
+    padding: 12px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #eee;
+    font-size: 14px;
+    text-align: left;
+    color: #333;
+}
+
+.search-results-container li:hover {
+    background-color: #f0f8ff; /* Đổi màu xanh nhạt khi đưa chuột vào */
+}
+
+.search-results-container li strong {
+    color: #274091;
+    font-size: 15px;
+}
+
+.search-results-container li span {
+    color: #888;
+    font-size: 12px;
+    display: block;
+    margin-top: 4px;
+}
