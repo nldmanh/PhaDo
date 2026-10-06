@@ -205,7 +205,7 @@ function calculatePositions(people) {
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
     
     // Đảo trục: distanceX là khoảng cách Thế hệ (cột ngang), distanceY là khoảng cách Anh chị em (hàng dọc)
-    const distanceX = 220; 
+    const distanceX = 450; 
     const distanceY = 70; 
     const INITIAL_X = 50;
     const INITIAL_Y = 50;
@@ -477,23 +477,29 @@ function drawConnections(data) {
 }
 
 // ==========================================
-// CHỨC NĂNG XUẤT PDF (TRÍCH XUẤT THEO KÍCH THƯỚC THỰC)
+// CHỨC NĂNG XUẤT PDF (ĐỘ PHÂN GIẢI CAO & FIX LỖI VIỀN XÁM)
 // ==========================================
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
-    
     const originalText = exportBtn.innerText;
-    exportBtn.innerText = 'Đang tạo PDF...';
+    
+    // Đổi text để báo hiệu vì xuất độ phân giải cao sẽ tốn thời gian hơn
+    exportBtn.innerText = 'Đang xử lý ảnh nét...'; 
     exportBtn.style.backgroundColor = '#95a5a6';
     exportBtn.disabled = true;
 
+    const canvasArea = document.getElementById('canvasArea');
     canvasArea.style.margin = '0px';
     canvasArea.style.boxShadow = 'none';
     canvasArea.style.transform = 'none'; 
     
-    document.querySelectorAll('.person-node').forEach(node => node.classList.remove('highlighted'));
+    // FIX LỖI VIỀN XÁM: Tạm thời xóa bỏ hoàn toàn hiệu ứng đổ bóng của các thẻ
+    const allNodes = document.querySelectorAll('.person-node');
+    allNodes.forEach(node => {
+        node.classList.remove('highlighted');
+        node.style.boxShadow = 'none'; // Xóa bóng xám gây lỗi
+    });
 
-    // Lấy kích thước thực tế của Canvas sau khi đã được vẽ đầy đủ dữ liệu
     const rect = canvasArea.getBoundingClientRect();
     const pdfWidth = rect.width;
     const pdfHeight = rect.height;
@@ -501,32 +507,37 @@ function exportPDF() {
     const opt = {
         margin:       0,
         filename:     'PhaDoGiaToc.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
+        image:        { type: 'jpeg', quality: 1 }, // Chất lượng ảnh tối đa
         html2canvas:  { 
-            scale: 1, 
+            scale: 3, // TĂNG ĐỘ PHÂN GIẢI GẤP 3 LẦN (Khắc phục vỡ nét khi zoom 100%)
             useCORS: true, 
             logging: false,
             scrollX: 0, 
             scrollY: 0,
-            width: pdfWidth, // Bắt buộc html2canvas phải chụp đủ chiều rộng
-            height: pdfHeight // Bắt buộc html2canvas phải chụp đủ chiều cao
+            width: pdfWidth, 
+            height: pdfHeight 
         },
-        // Khởi tạo trang PDF tùy chỉnh theo đúng tỷ lệ pixel của bức ảnh
-        jsPDF:        { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
+        jsPDF: { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
     };
 
     html2pdf().set(opt).from(canvasArea).save().then(() => {
+        // KHÔI PHỤC LẠI GIAO DIỆN
         canvasArea.style.margin = ''; 
         canvasArea.style.boxShadow = ''; 
+        allNodes.forEach(node => {
+            node.style.boxShadow = ''; // Trả lại hiệu ứng đổ bóng trên web
+        });
         updateTransform(); 
         exportBtn.innerText = originalText;
         exportBtn.style.backgroundColor = '#e74c3c';
         exportBtn.disabled = false;
     }).catch(err => {
         console.error("Lỗi khi xuất PDF:", err);
-        alert('Có lỗi xảy ra khi xuất PDF. Vui lòng thử lại!');
+        alert('Có lỗi xảy ra khi xuất PDF. Việc xuất file dung lượng quá lớn có thể cần làm trên máy tính có RAM mạnh hơn.');
+        
         canvasArea.style.margin = ''; 
         canvasArea.style.boxShadow = ''; 
+        allNodes.forEach(node => { node.style.boxShadow = ''; });
         updateTransform();
         exportBtn.innerText = originalText;
         exportBtn.style.backgroundColor = '#e74c3c';
