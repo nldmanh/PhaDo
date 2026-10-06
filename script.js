@@ -342,7 +342,6 @@ function drawNodes(data, positions) {
         const pos = positions[person.ID];
         if (!pos) return;
 
-        // Tính toán tọa độ lớn nhất để giãn nở Canvas
         if (pos.x > maxX) maxX = pos.x;
         if (pos.y > maxY) maxY = pos.y;
 
@@ -350,6 +349,12 @@ function drawNodes(data, positions) {
         node.className = 'person-node';
         node.id = 'node-' + person.ID; 
         
+        // 1. KIỂM TRA NHÃN CỤ TỔ ĐỂ ÁP DỤNG CSS PHÓNG TO
+        const isFounder = String(person.IsFounder) === '1';
+        if (isFounder) {
+            node.classList.add('founder-node');
+        }
+
         node.style.left = pos.x + 'px';
         node.style.top = pos.y + 'px';
 
@@ -357,7 +362,8 @@ function drawNodes(data, positions) {
 
         let nodeHTML = '<div class="node-name ' + genderClass + '">' + person.Name + '</div>';
         
-        if (person.Spouse && person.Gender && person.Gender.toLowerCase() === 'nam') {
+        // 2. ẨN TÊN VỢ TRÊN THẺ HIỂN THỊ NẾU LÀ CỤ TỔ
+        if (!isFounder && person.Spouse && person.Gender && person.Gender.toLowerCase() === 'nam') {
             nodeHTML += '<div class="node-spouse">' + person.Spouse + '</div>';
         }
         
@@ -386,17 +392,22 @@ function drawNodes(data, positions) {
                       <label>Giới tính:</label>
                       <input type="text" value="${person.Gender || 'Nam'}" readonly>
                     </div>
+                    
+                    <!-- 3. ẨN Ô ĐỜI THỨ TRONG BẢNG CHI TIẾT NẾU LÀ CỤ TỔ -->
+                    ${!isFounder ? `
                     <div class="form-group">
                       <label>Đời thứ:</label>
                       <input type="text" value="${person.Generation || ''}" readonly>
-                    </div>
+                    </div>` : '<div class="form-group"></div>'}
                   </div>
+                  
                   <div class="form-group">
                     <label>Cha:</label>
                     <input type="text" value="${getFatherName(person.FatherID)}" readonly>
                   </div>`;
 
-            if (person.Gender && person.Gender.toLowerCase() === 'nam') {
+            // 4. NẾU KHÔNG PHẢI CỤ TỔ VÀ LÀ NAM THÌ MỚI HIỆN VỢ VÀ CON CÁI
+            if (!isFounder && person.Gender && person.Gender.toLowerCase() === 'nam') {
                 html += `
                   <div class="form-group">
                     <label>Vợ:</label>
@@ -436,7 +447,6 @@ function drawNodes(data, positions) {
         nodesContainer.appendChild(node);
     });
 
-    // Ép kích thước Canvas tự động phình to bằng đúng kích thước dữ liệu lớn nhất (+ padding 250px)
     canvasArea.style.width = (maxX + 250) + 'px';
     canvasArea.style.height = (maxY + 150) + 'px';
 }
