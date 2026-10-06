@@ -204,7 +204,7 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
     
-    const distanceX = 350; 
+    const distanceX = 300; 
     const distanceY = 70; 
     const INITIAL_X = 50;
     const INITIAL_Y = 50;
