@@ -277,3 +277,47 @@
     display: block;
     margin-top: 4px;
 }
+
+/* --- ĐỊNH DẠNG RIÊNG CHO CÁC CỤ TỔ (ISFOUNDER = 1) --- */
+.founder-node {
+    padding: 15px 25px; 
+    min-width: 200px;
+    border-color: #c0392b; 
+    background-color: #fdf2e9; 
+    border-width: 3px; 
+    z-index: 5;
+}
+.founder-node .node-name {
+    font-size: 20px; /* Chữ siêu to */
+    color: #c0392b; 
+    text-transform: uppercase; 
+}
+
+/* --- ĐỊNH DẠNG CHO THẾ HỆ > 4 (XOAY DỌC) --- */
+.vertical-node {
+    /* Đảo chiều văn bản thành cột dọc */
+    writing-mode: vertical-rl;
+    /* Xoay 180 độ để chữ chạy từ dưới lên trên */
+    transform: rotate(180deg);
+    min-height: 220px; /* Đổi chiều ngang thành chiều cao */
+    min-width: 45px;   /* Đổi chiều cao thành chiều ngang */
+    padding: 15px 8px;
+    text-align: center;
+    background-color: #fff9f5;
+}
+
+.vertical-node .node-name {
+    margin-bottom: 0;
+    margin-left: 5px; /* Khoảng cách lề điều chỉnh theo hướng dọc */
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.vertical-node .node-spouse {
+    border-top: none;
+    border-left: 1px dashed #ccc; /* Nét đứt chuyển sang trục dọc */
+    padding-top: 0;
+    padding-left: 6px;
+    margin-top: 0;
+    margin-left: 5px;
+}
