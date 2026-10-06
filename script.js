@@ -173,9 +173,8 @@ function focusOnNode(id) {
 }
 
 // ==========================================
-// CÁC HÀM VẼ PHẢ ĐỒ 
+// CÁC HÀM VẼ PHẢ ĐỒ (RẼ NHÁNH TỪ TRÁI SANG PHẢI)
 // ==========================================
-
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
     drawNodes(data, positions);
@@ -204,12 +203,15 @@ function calculatePositions(people) {
     });
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
-    const distanceY = 160; 
+    
+    // Đảo trục: distanceX là khoảng cách Thế hệ (cột ngang), distanceY là khoảng cách Anh chị em (hàng dọc)
     const distanceX = 220; 
+    const distanceY = 70; 
+    const INITIAL_X = 50;
     const INITIAL_Y = 50;
 
     const layoutSubtree = (personId, currentGen) => {
-        const subPos = { [personId]: { y: currentGen * distanceY + INITIAL_Y, x: 0 } };
+        const subPos = { [personId]: { x: currentGen * distanceX + INITIAL_X, y: 0 } };
         const subContours = { [currentGen]: { min: 0, max: 0 } };
         const children = childrenMap[personId] || [];
         if (children.length === 0) return { positions: subPos, contours: subContours };
@@ -224,13 +226,14 @@ function calculatePositions(people) {
                 Object.keys(childLayout.contours).forEach(genStr => {
                     const gen = parseInt(genStr, 10);
                     if (cumulativeContours[gen] && childLayout.contours[gen]) {
-                        const overlapShift = cumulativeContours[gen].max + distanceX - childLayout.contours[gen].min;
+                        // Tính toán độ lùi chống chồng lấp theo trục Y
+                        const overlapShift = cumulativeContours[gen].max + distanceY - childLayout.contours[gen].min;
                         if (overlapShift > shift) shift = overlapShift;
                     }
                 });
             }
             Object.keys(childLayout.positions).forEach(id => {
-                packedChildrenPos[id] = { y: childLayout.positions[id].y, x: childLayout.positions[id].x + shift };
+                packedChildrenPos[id] = { x: childLayout.positions[id].x, y: childLayout.positions[id].y + shift };
             });
             Object.keys(childLayout.contours).forEach(genStr => {
                 const gen = parseInt(genStr, 10);
@@ -245,13 +248,13 @@ function calculatePositions(people) {
             });
         });
 
-        const firstChildX = packedChildrenPos[children[0].ID].x;
-        const lastChildX = packedChildrenPos[children[children.length - 1].ID].x;
-        const targetParentX = (firstChildX + lastChildX) / 2;
-        const childrenShift = -targetParentX;
+        const firstChildY = packedChildrenPos[children[0].ID].y;
+        const lastChildY = packedChildrenPos[children[children.length - 1].ID].y;
+        const targetParentY = (firstChildY + lastChildY) / 2;
+        const childrenShift = -targetParentY;
 
         Object.keys(packedChildrenPos).forEach(id => {
-            subPos[id] = { y: packedChildrenPos[id].y, x: packedChildrenPos[id].x + childrenShift };
+            subPos[id] = { x: packedChildrenPos[id].x, y: packedChildrenPos[id].y + childrenShift };
         });
         Object.keys(cumulativeContours).forEach(genStr => {
             const gen = parseInt(genStr, 10);
@@ -268,7 +271,7 @@ function calculatePositions(people) {
     };
 
     const globalContours = {};
-    let currentGlobalShift = 50;
+    let currentGlobalShift = INITIAL_Y;
 
     roots.forEach((root, index) => {
         const rootGen = root.Generation || 1;
@@ -280,21 +283,21 @@ function calculatePositions(people) {
             Object.keys(rootLayout.contours).forEach(genStr => {
                 const gen = parseInt(genStr, 10);
                 if (globalContours[gen] && rootLayout.contours[gen]) {
-                    const neededShift = globalContours[gen].max + distanceX - rootLayout.contours[gen].min;
+                    const neededShift = globalContours[gen].max + distanceY - rootLayout.contours[gen].min;
                     if (neededShift > maxOverlapShift) maxOverlapShift = neededShift;
                 }
             });
             shift = maxOverlapShift;
         } else {
-            let minSubX = Infinity;
+            let minSubY = Infinity;
             Object.keys(rootLayout.positions).forEach(id => {
-                if (rootLayout.positions[id].x < minSubX) minSubX = rootLayout.positions[id].x;
+                if (rootLayout.positions[id].y < minSubY) minSubY = rootLayout.positions[id].y;
             });
-            if (minSubX < 0) shift = 50 - minSubX;
+            if (minSubY < 0) shift = INITIAL_Y - minSubY;
         }
 
         Object.keys(rootLayout.positions).forEach(id => {
-            pos[id] = { y: rootLayout.positions[id].y, x: rootLayout.positions[id].x + shift };
+            pos[id] = { x: rootLayout.positions[id].x, y: rootLayout.positions[id].y + shift };
         });
         Object.keys(rootLayout.contours).forEach(genStr => {
             const gen = parseInt(genStr, 10);
@@ -307,7 +310,7 @@ function calculatePositions(people) {
                 globalContours[gen].max = Math.max(globalContours[gen].max, maxVal);
             }
         });
-        if (globalContours[rootGen]) currentGlobalShift = globalContours[rootGen].max + distanceX;
+        if (globalContours[rootGen]) currentGlobalShift = globalContours[rootGen].max + distanceY;
     });
 
     return pos;
@@ -315,6 +318,8 @@ function calculatePositions(people) {
 
 function drawNodes(data, positions) {
     nodesContainer.innerHTML = ''; 
+    let maxX = 0;
+    let maxY = 0;
     
     const getFatherName = (fatherId) => {
         if (!fatherId) return 'Cụ Tổ';
@@ -323,22 +328,28 @@ function drawNodes(data, positions) {
     };
 
     const getChildrenNames = (childrenIds) => {
-        if (!childrenIds || childrenIds.length === 0) return 'Không có con';
-        return childrenIds
-            .map((childId) => {
-                const child = data.find((p) => String(p.ID) === String(childId));
-                return child ? child.Name : childId;
-            })
-            .join(', ');
+        if (!childrenIds) return 'Không có con';
+        const idsArray = Array.isArray(childrenIds) ? childrenIds : String(childrenIds).split(',');
+        const validIds = idsArray.map(id => String(id).trim()).filter(id => id !== '');
+        if (validIds.length === 0) return 'Không có con';
+        
+        return validIds.map((childId) => {
+            const child = data.find((p) => String(p.ID) === childId);
+            return child ? child.Name : childId;
+        }).join(', ');
     };
 
     data.forEach(person => {
         const pos = positions[person.ID];
         if (!pos) return;
 
+        // Tính toán tọa độ lớn nhất để giãn nở Canvas
+        if (pos.x > maxX) maxX = pos.x;
+        if (pos.y > maxY) maxY = pos.y;
+
         const node = document.createElement('div');
         node.className = 'person-node';
-        node.id = 'node-' + person.ID; // Chuyển sang nối chuỗi an toàn
+        node.id = 'node-' + person.ID; 
         
         node.style.left = pos.x + 'px';
         node.style.top = pos.y + 'px';
@@ -361,7 +372,6 @@ function drawNodes(data, positions) {
               <div class="modal-content" id="modalContent">
                 <h2>${person.Name}</h2>
                 <form onsubmit="event.preventDefault()">
-                  
                   <div class="form-row">
                     <div class="form-group">
                       <label>Năm sinh:</label>
@@ -372,7 +382,6 @@ function drawNodes(data, positions) {
                       <input type="text" value="${person.YearOfDeath || 'Chưa rõ'}" readonly>
                     </div>
                   </div>
-
                   <div class="form-row">
                     <div class="form-group">
                       <label>Giới tính:</label>
@@ -383,7 +392,6 @@ function drawNodes(data, positions) {
                       <input type="text" value="${person.Generation || ''}" readonly>
                     </div>
                   </div>
-
                   <div class="form-group">
                     <label>Cha:</label>
                     <input type="text" value="${getFatherName(person.FatherID)}" readonly>
@@ -428,6 +436,10 @@ function drawNodes(data, positions) {
 
         nodesContainer.appendChild(node);
     });
+
+    // Ép kích thước Canvas tự động phình to bằng đúng kích thước dữ liệu lớn nhất (+ padding 250px)
+    canvasArea.style.width = (maxX + 250) + 'px';
+    canvasArea.style.height = (maxY + 150) + 'px';
 }
 
 function drawConnections(data) {
@@ -440,16 +452,17 @@ function drawConnections(data) {
             const childNode = document.getElementById('node-' + person.ID);
 
             if (fatherNode && childNode) {
-                const startX = fatherNode.offsetLeft + (fatherNode.offsetWidth / 2);
-                const startY = fatherNode.offsetTop + fatherNode.offsetHeight;
+                // Tọa độ bắt đầu: GIỮA CẠNH PHẢI của thẻ Cha
+                const startX = fatherNode.offsetLeft + fatherNode.offsetWidth;
+                const startY = fatherNode.offsetTop + (fatherNode.offsetHeight / 2);
 
-                const endX = childNode.offsetLeft + (childNode.offsetWidth / 2);
-                const endY = childNode.offsetTop;
+                // Tọa độ kết thúc: GIỮA CẠNH TRÁI của thẻ Con
+                const endX = childNode.offsetLeft;
+                const endY = childNode.offsetTop + (childNode.offsetHeight / 2);
 
-                const midY = startY + (endY - startY) / 2;
+                const midX = startX + (endX - startX) / 2;
 
-                // Nối chuỗi Path an toàn
-                const pathData = 'M ' + startX + ' ' + startY + ' L ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY;
+                const pathData = 'M ' + startX + ' ' + startY + ' L ' + midX + ' ' + startY + ' L ' + midX + ' ' + endY + ' L ' + endX + ' ' + endY;
 
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
                 path.setAttribute('d', pathData);
@@ -464,58 +477,54 @@ function drawConnections(data) {
 }
 
 // ==========================================
-// CHỨC NĂNG XUẤT PDF
+// CHỨC NĂNG XUẤT PDF (TRÍCH XUẤT THEO KÍCH THƯỚC THỰC)
 // ==========================================
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
-    const canvasArea = document.getElementById('canvasArea');
     
-    // 1. Đổi trạng thái nút để báo cho người dùng biết đang xử lý
     const originalText = exportBtn.innerText;
     exportBtn.innerText = 'Đang tạo PDF...';
     exportBtn.style.backgroundColor = '#95a5a6';
     exportBtn.disabled = true;
 
-    // 2. CHUẨN BỊ CANVAS ĐỂ CHỤP ẢNH
-    // Tạm thời xóa bỏ lề, bóng và dịch chuyển để html2canvas chụp đúng mép 100%
     canvasArea.style.margin = '0px';
     canvasArea.style.boxShadow = 'none';
     canvasArea.style.transform = 'none'; 
     
-    // Xóa tạm thời hiệu ứng nổi bật (nếu đang có người được tìm kiếm) để bản in đẹp hơn
     document.querySelectorAll('.person-node').forEach(node => node.classList.remove('highlighted'));
 
-    // 3. Cấu hình thông số PDF
+    // Lấy kích thước thực tế của Canvas sau khi đã được vẽ đầy đủ dữ liệu
+    const rect = canvasArea.getBoundingClientRect();
+    const pdfWidth = rect.width;
+    const pdfHeight = rect.height;
+
     const opt = {
-        margin:       0, // Đặt lề PDF bằng 0 tuyệt đối
+        margin:       0,
         filename:     'PhaDoGiaToc.pdf',
         image:        { type: 'jpeg', quality: 0.98 },
         html2canvas:  { 
             scale: 1, 
             useCORS: true, 
             logging: false,
-            scrollX: 0, // Bỏ qua thanh cuộn ẩn của trình duyệt
-            scrollY: 0
+            scrollX: 0, 
+            scrollY: 0,
+            width: pdfWidth, // Bắt buộc html2canvas phải chụp đủ chiều rộng
+            height: pdfHeight // Bắt buộc html2canvas phải chụp đủ chiều cao
         },
-        jsPDF:        { unit: 'px', format: [4492, 3177], orientation: 'landscape' } // Cố định hệ quy chiếu pixel khổ A0 ngang
+        // Khởi tạo trang PDF tùy chỉnh theo đúng tỷ lệ pixel của bức ảnh
+        jsPDF:        { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
     };
 
-    // 4. Ra lệnh chụp ảnh, xuất file và KHÔI PHỤC TRẠNG THÁI
     html2pdf().set(opt).from(canvasArea).save().then(() => {
-        // Trả lại các thuộc tính CSS cũ cho không gian làm việc
         canvasArea.style.margin = ''; 
         canvasArea.style.boxShadow = ''; 
-        updateTransform(); // Khôi phục lại mức độ zoom và vị trí kéo thả trước khi in
-
-        // Khôi phục lại nút bấm
+        updateTransform(); 
         exportBtn.innerText = originalText;
         exportBtn.style.backgroundColor = '#e74c3c';
         exportBtn.disabled = false;
     }).catch(err => {
         console.error("Lỗi khi xuất PDF:", err);
         alert('Có lỗi xảy ra khi xuất PDF. Vui lòng thử lại!');
-        
-        // Khôi phục khi có lỗi
         canvasArea.style.margin = ''; 
         canvasArea.style.boxShadow = ''; 
         updateTransform();
