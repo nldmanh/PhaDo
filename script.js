@@ -205,7 +205,7 @@ function calculatePositions(people) {
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
     
     // Đảo trục: distanceX là khoảng cách Thế hệ (cột ngang), distanceY là khoảng cách Anh chị em (hàng dọc)
-    const distanceX = 450; 
+    const distanceX = 400; 
     const distanceY = 70; 
     const INITIAL_X = 50;
     const INITIAL_Y = 50;
