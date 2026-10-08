@@ -15,24 +15,18 @@ const canvasArea = document.getElementById('canvasArea');
 jsonInput.addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
-
     reader.onload = function(e) {
         try {
             const familyData = JSON.parse(e.target.result);
             window.familyTreeData = familyData.map(p => ({
-                ...p,
-                Generation: parseInt(p.Generation, 10) || 1 
+                ...p, Generation: parseInt(p.Generation, 10) || 1 
             }));
-
             startScreen.style.display = 'none';
             mainWorkspace.style.display = 'block';
-
             renderFamilyTree(window.familyTreeData);
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
-            console.error(error);
         }
     };
     reader.readAsText(file);
@@ -46,10 +40,8 @@ canvasContainer.addEventListener('wheel', (e) => {
     const rect = canvasContainer.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
-
     const newScale = Math.min(Math.max(0.1, scale + delta), 3); 
     const ratio = newScale / scale;
-    
     translateX = mouseX - (mouseX - translateX) * ratio;
     translateY = mouseY - (mouseY - translateY) * ratio;
     scale = newScale;
@@ -79,11 +71,11 @@ window.resetView = function() {
     const rootNode = document.querySelector('.founder-gen-1') || document.querySelector('.person-node');
     if (rootNode) {
         const containerRect = canvasContainer.getBoundingClientRect();
+        // Căn Cụ Tổ ra giữa không gian làm việc của người dùng
         translateX = (containerRect.width / 2) - rootNode.offsetLeft - (rootNode.offsetWidth / 2);
         translateY = 80 - rootNode.offsetTop; 
     } else {
-        translateX = 50; 
-        translateY = 50; 
+        translateX = 50; translateY = 50; 
     }
     updateTransform();
 }
@@ -95,7 +87,6 @@ if (searchInput) {
         const val = this.value.trim().toLowerCase();
         searchResults.innerHTML = '';
         if (!val || !window.familyTreeData) { searchResults.style.display = 'none'; return; }
-
         const matches = window.familyTreeData.filter(p => p.Name.toLowerCase().includes(val));
         if (matches.length > 0) {
             searchResults.style.display = 'block';
@@ -182,7 +173,7 @@ function calculatePositions(people) {
 
     const depthY = {};
     let currentY = 50;
-    const GAP_Y = 80; 
+    const GAP_Y = 80; // Khoảng cách cố định giữa các thế hệ
     const maxDepth = Math.max(0, ...Object.values(depths));
     for (let i = 0; i <= maxDepth; i++) {
         depthY[i] = currentY;
@@ -360,7 +351,11 @@ function drawNodes(data, positions) {
             nodeHTML += '<div class="node-spouse">' + person.Spouse + '</div>';
         }
         
-        node.innerHTML = nodeHTML;
+        if (isVertical) {
+            node.innerHTML = '<div class="vertical-wrapper">' + nodeHTML + '</div>';
+        } else {
+            node.innerHTML = nodeHTML;
+        }
         
         const openModalHandler = function(e) {
             e.preventDefault(); 
@@ -404,6 +399,7 @@ function drawNodes(data, positions) {
         let maxX = 0, maxY = 0;
         const allNodes = document.querySelectorAll('.person-node');
         
+        // Quét đo đạc biên giới thực tế bọc sát gia phả
         allNodes.forEach(node => {
             if (node.offsetLeft < minX) minX = node.offsetLeft;
             if (node.offsetTop < minY) minY = node.offsetTop;
@@ -413,25 +409,19 @@ function drawNodes(data, positions) {
             if (bottom > maxY) maxY = bottom;
         });
 
-        const rootNode = document.querySelector('.founder-gen-1') || allNodes[0];
-        const rootCenterX = rootNode ? (rootNode.offsetLeft + rootNode.offsetWidth / 2) : ((minX + maxX) / 2);
-
-        // Căn cứ vào vị trí Cụ tổ để mở rộng khổ giấy sao cho cân bằng cả 2 bên
-        const distLeft = rootCenterX - minX;
-        const distRight = maxX - rootCenterX;
-        const maxDist = Math.max(distLeft, distRight);
-        
-        const contentW = maxDist * 2; 
+        // Bỏ logic "maxDist * 2", ôm sát rịt lấy chiều rộng và cao của cây
+        const contentW = maxX - minX; 
         const contentH = maxY - minY;
         
-        const PADDING = 250; 
-        const targetW = contentW + PADDING;
-        const targetH = contentH + PADDING;
+        const PADDING = 80; // Giảm lề thừa từ 250px xuống còn 80px
+        const targetW = contentW + PADDING * 2;
+        const targetH = contentH + PADDING * 2;
         const ISO_RATIO = 1.41421356; 
 
         let finalW = targetW;
         let finalH = targetH;
         
+        // Tính toán lấp đầy ISO 216 để xuất PDF chuẩn A0/A1
         if (targetW > targetH) { 
             if (targetW / targetH < ISO_RATIO) finalW = targetH * ISO_RATIO;
             else finalH = targetW / ISO_RATIO;
@@ -443,18 +433,17 @@ function drawNodes(data, positions) {
         canvasArea.style.width = finalW + 'px';
         canvasArea.style.height = finalH + 'px';
 
-        // Tịnh tiến bảo toàn nguyên vẹn tọa độ thuật toán để đặt Cụ tổ vào chính giữa
-        const targetCenterX = finalW / 2;
-        const targetMinY = (finalH - contentH) / 2;
-        
-        const shiftX = targetCenterX - rootCenterX;
-        const shiftY = targetMinY - minY;
+        // Tính toán vector dịch chuyển đặt gia phả vào trung tâm tờ giấy
+        const shiftX = (finalW - contentW) / 2 - minX;
+        const shiftY = (finalH - contentH) / 2 - minY;
 
         allNodes.forEach(node => {
             node.style.left = (node.offsetLeft + shiftX) + 'px';
             node.style.top = (node.offsetTop + shiftY) + 'px';
         });
 
+        // Tuyệt đối không ép Cụ Tổ ra giữa một cách độc đoán nữa, 
+        // bản thân thuật toán layoutSubtree đã tự động đưa Cha đứng giữa tập hợp các Con rồi.
         drawConnections(data);
         window.resetView();
 
@@ -491,7 +480,6 @@ function drawConnections(data) {
     });
 }
 
-// --- XUẤT PDF VỚI CÔNG NGHỆ NATIVE BROWSER (html-to-image) ---
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
@@ -500,13 +488,10 @@ function exportPDF() {
     exportBtn.disabled = true;
 
     const canvasArea = document.getElementById('canvasArea');
-    
-    // Lưu lại trạng thái giao diện ban đầu
     const originalMargin = canvasArea.style.margin;
     const originalBoxShadow = canvasArea.style.boxShadow;
     const originalTransform = canvasArea.style.transform;
 
-    // Xóa các hiệu ứng để bản in sạch sẽ
     canvasArea.style.margin = '0px';
     canvasArea.style.boxShadow = 'none';
     canvasArea.style.transform = 'none'; 
@@ -521,11 +506,10 @@ function exportPDF() {
     const pdfWidth = rect.width;
     const pdfHeight = rect.height;
 
-    // Sử dụng thư viện htmlToImage để chụp ảnh chính xác tuyệt đối CSS
     htmlToImage.toJpeg(canvasArea, {
         quality: 0.98,
-        backgroundColor: '#ffffff', // Ép phông nền trắng, chống lỗi màn hình đen
-        pixelRatio: 3, // Tỷ lệ thu phóng nét (tương đương scale của html2canvas)
+        backgroundColor: '#ffffff', 
+        pixelRatio: 3,
         width: pdfWidth,
         height: pdfHeight,
         style: {
@@ -535,10 +519,7 @@ function exportPDF() {
         }
     })
     .then(function (dataUrl) {
-        // Gọi đối tượng jsPDF từ thư viện mới tải
         const { jsPDF } = window.jspdf;
-        
-        // Khởi tạo trang PDF vừa vặn với kích thước ảnh chụp
         const orientation = pdfWidth > pdfHeight ? 'landscape' : 'portrait';
         const doc = new jsPDF({
             orientation: orientation,
@@ -546,11 +527,9 @@ function exportPDF() {
             format: [pdfWidth, pdfHeight]
         });
 
-        // Dán ảnh chụp vào file PDF và tải xuống
         doc.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         doc.save('PhaDoGiaToc.pdf');
 
-        // Phục hồi lại giao diện cho người dùng
         canvasArea.style.margin = originalMargin; 
         canvasArea.style.boxShadow = originalBoxShadow; 
         canvasArea.style.transform = originalTransform;
