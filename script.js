@@ -509,7 +509,7 @@ function exportPDF() {
     htmlToImage.toJpeg(canvasArea, {
         quality: 0.98,
         backgroundColor: '#ffffff', 
-        pixelRatio: 3,
+        pixelRatio: 2,
         width: pdfWidth,
         height: pdfHeight,
         style: {
