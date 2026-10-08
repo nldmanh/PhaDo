@@ -491,6 +491,7 @@ function drawConnections(data) {
     });
 }
 
+// --- XUẤT PDF VỚI CÔNG NGHỆ NATIVE BROWSER (html-to-image) ---
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
@@ -499,44 +500,77 @@ function exportPDF() {
     exportBtn.disabled = true;
 
     const canvasArea = document.getElementById('canvasArea');
+    
+    // Lưu lại trạng thái giao diện ban đầu
+    const originalMargin = canvasArea.style.margin;
+    const originalBoxShadow = canvasArea.style.boxShadow;
+    const originalTransform = canvasArea.style.transform;
+
+    // Xóa các hiệu ứng để bản in sạch sẽ
     canvasArea.style.margin = '0px';
     canvasArea.style.boxShadow = 'none';
     canvasArea.style.transform = 'none'; 
     
     const allNodes = document.querySelectorAll('.person-node');
-    allNodes.forEach(node => { node.classList.remove('highlighted'); node.style.boxShadow = 'none'; });
+    allNodes.forEach(node => { 
+        node.classList.remove('highlighted'); 
+        node.style.boxShadow = 'none'; 
+    });
 
     const rect = canvasArea.getBoundingClientRect();
     const pdfWidth = rect.width;
     const pdfHeight = rect.height;
 
-    const opt = {
-        margin:       0,
-        filename:     'PhaDoGiaToc.pdf',
-        image:        { type: 'jpeg', quality: 0.98 }, 
-        html2canvas:  { 
-            scale: 2, // Giới hạn lại tỷ lệ để giải phóng RAM cho trình duyệt
-            useCORS: true, 
-            logging: false, 
-            backgroundColor: '#ffffff', // Ép định dạng nền trắng tuyệt đối chống lỗi đen PDF
-            scrollX: 0, 
-            scrollY: 0, 
-            width: pdfWidth, 
-            height: pdfHeight 
-        },
-        jsPDF: { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
-    };
+    // Sử dụng thư viện htmlToImage để chụp ảnh chính xác tuyệt đối CSS
+    htmlToImage.toJpeg(canvasArea, {
+        quality: 0.98,
+        backgroundColor: '#ffffff', // Ép phông nền trắng, chống lỗi màn hình đen
+        pixelRatio: 1.5, // Tỷ lệ thu phóng nét (tương đương scale của html2canvas)
+        width: pdfWidth,
+        height: pdfHeight,
+        style: {
+            transform: 'none',
+            transformOrigin: 'top left',
+            margin: '0'
+        }
+    })
+    .then(function (dataUrl) {
+        // Gọi đối tượng jsPDF từ thư viện mới tải
+        const { jsPDF } = window.jspdf;
+        
+        // Khởi tạo trang PDF vừa vặn với kích thước ảnh chụp
+        const orientation = pdfWidth > pdfHeight ? 'landscape' : 'portrait';
+        const doc = new jsPDF({
+            orientation: orientation,
+            unit: 'px',
+            format: [pdfWidth, pdfHeight]
+        });
 
-    html2pdf().set(opt).from(canvasArea).save().then(() => {
-        canvasArea.style.margin = ''; canvasArea.style.boxShadow = ''; 
+        // Dán ảnh chụp vào file PDF và tải xuống
+        doc.addImage(dataUrl, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        doc.save('PhaDoGiaToc.pdf');
+
+        // Phục hồi lại giao diện cho người dùng
+        canvasArea.style.margin = originalMargin; 
+        canvasArea.style.boxShadow = originalBoxShadow; 
+        canvasArea.style.transform = originalTransform;
         allNodes.forEach(node => { node.style.boxShadow = ''; });
-        updateTransform(); 
-        exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#60d3f7'; exportBtn.disabled = false;
-    }).catch(err => {
-        console.error("Lỗi khi xuất PDF:", err); alert('Có lỗi xảy ra khi xuất PDF. Việc xuất file dung lượng quá lớn có thể cần làm trên thiết bị cấu hình cao hơn.');
-        canvasArea.style.margin = ''; canvasArea.style.boxShadow = ''; 
+        
+        exportBtn.innerText = originalText; 
+        exportBtn.style.backgroundColor = '#60d3f7'; 
+        exportBtn.disabled = false;
+    })
+    .catch(function (error) {
+        console.error("Lỗi khi xuất PDF:", error); 
+        alert('Có lỗi xảy ra khi chụp ảnh màn hình.');
+        
+        canvasArea.style.margin = originalMargin; 
+        canvasArea.style.boxShadow = originalBoxShadow; 
+        canvasArea.style.transform = originalTransform;
         allNodes.forEach(node => { node.style.boxShadow = ''; });
-        updateTransform();
-        exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#60d3f7'; exportBtn.disabled = false;
+        
+        exportBtn.innerText = originalText; 
+        exportBtn.style.backgroundColor = '#60d3f7'; 
+        exportBtn.disabled = false;
     });
 }
