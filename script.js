@@ -525,7 +525,7 @@ function exportPDF() {
     htmlToImage.toJpeg(canvasArea, {
         quality: 0.98,
         backgroundColor: '#ffffff', // Ép phông nền trắng, chống lỗi màn hình đen
-        pixelRatio: 2, // Tỷ lệ thu phóng nét (tương đương scale của html2canvas)
+        pixelRatio: 3, // Tỷ lệ thu phóng nét (tương đương scale của html2canvas)
         width: pdfWidth,
         height: pdfHeight,
         style: {
