@@ -304,38 +304,74 @@
     margin-bottom: 5px;
 }
 
-/* --- BƯỚC 3: THẺ TỪ THẾ HỆ 4 TRỞ ĐI (XOAY DỌC TỪ DƯỚI LÊN TRÊN) --- */
-.vertical-node {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    min-height: 220px !important;
-    min-width: 45px !important;
-    padding: 15px 8px !important;
-    text-align: center;
+/* --- BƯỚC 3. MỚI: SỬA LỖI IN PDF VỚI THẺ DỌC --- */
+.person-node.vertical-node {
+    /* Ép thẻ gốc thành một cái "khung tàng hình" để giữ khoảng trống cho thuật toán JS */
+    width: 55px !important;
+    height: 250px !important;
+    min-width: 55px !important;
+    min-height: 250px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
 }
 
-/* FIX 1: Giữ nguyên trạng thái xoay 180 độ khi Hover, chỉ phóng to */
-.vertical-node:hover {
-    transform: rotate(180deg) scale(1.05) !important;
-}
-
-.vertical-node .node-name {
-    margin-bottom: 0;
-    margin-left: 6px; 
-    font-size: 14px;
-    letter-spacing: 1px;
-}
-
-.vertical-node .node-spouse {
-    border-top: none;
-    padding-top: 0;
-    margin-top: 0;
+.vertical-wrapper {
+    /* Đây mới là thẻ thật sự hiển thị, xoay -90 độ để đứng lên */
+    position: absolute;
+    width: 250px;
+    height: 55px;
     
-    /* FIX 2: Đổi left thành right để vạch kẻ lọt vào giữa Name và Spouse */
-    border-right: 1px dashed #ccc; 
-    padding-right: 6px;
-    margin-right: 6px;
-    border-left: none; 
-    padding-left: 0;
-    margin-left: 0;
+    /* Đưa chính xác vào giữa khung tàng hình */
+    top: 50%;
+    left: 50%;
+    margin-top: -27.5px; /* Lùi bằng 1 nửa chiều cao thẻ */
+    margin-left: -125px; /* Lùi bằng 1 nửa chiều rộng thẻ */
+    
+    /* Xoay từ nằm ngang thành nằm dọc (đọc từ dưới lên) */
+    transform: rotate(-90deg);
+    
+    background-color: #fff;
+    border: 2px solid #333;
+    border-radius: 6px;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    
+    /* Sắp xếp Tên và Vợ nằm ngang hàng nhau */
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+/* Hiệu ứng đưa chuột vào (giữ nguyên góc xoay -90) */
+.person-node.vertical-node:hover .vertical-wrapper {
+    transform: rotate(-90deg) scale(1.05);
+    border-color: #007bff;
+}
+
+/* Hiệu ứng khi tìm kiếm trúng thẻ */
+.person-node.vertical-node.highlighted .vertical-wrapper {
+    border: 3px solid #ff9800;
+    box-shadow: 0 0 25px rgba(255, 152, 0, 0.9);
+}
+
+.vertical-wrapper .node-name {
+    margin: 0;
+    padding-right: 12px;
+    font-size: 14px;
+    white-space: nowrap; /* Không cho chữ rớt dòng */
+}
+
+.vertical-wrapper .node-spouse {
+    margin: 0;
+    border-top: none;
+    border-left: 1px dashed #ccc;
+    padding-left: 12px;
+    padding-top: 0;
+    font-size: 12px;
+    white-space: nowrap;
 }
