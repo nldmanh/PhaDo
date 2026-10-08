@@ -278,3 +278,79 @@
     margin-top: 4px;
 }
 
+/* --- THIẾT KẾ THẺ THÔNG TIN CƠ BẢN --- */
+.person-node {
+    position: absolute; 
+    border: 2px solid #333;
+    background-color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    width: 160px; /* Bắt buộc ấn định chiều rộng chuẩn là 160px */
+    text-align: center;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    cursor: pointer;
+    background-clip: padding-box;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* --- CỤ TỔ ĐỜI 1 (TO GẤP 8 LẦN) --- */
+.founder-gen-1 {
+    width: 1280px !important; /* 160 * 8 */
+    min-height: 560px;
+    border-width: 16px;
+    border-radius: 40px;
+    border-color: #c0392b; 
+    background-color: #fdf2e9; 
+    padding: 40px;
+    z-index: 5;
+}
+.founder-gen-1 .node-name {
+    font-size: 112px; /* 14px * 8 */
+    color: #c0392b; 
+    text-transform: uppercase; 
+}
+
+/* --- CỤ TỔ ĐỜI > 1 (TO GẤP 4 LẦN) --- */
+.founder-gen-n {
+    width: 640px !important; /* 160 * 4 */
+    min-height: 280px;
+    border-width: 8px;
+    border-radius: 20px;
+    border-color: #d35400; 
+    background-color: #fdf2e9; 
+    padding: 20px;
+    z-index: 5;
+}
+.founder-gen-n .node-name {
+    font-size: 56px; /* 14px * 4 */
+    color: #d35400; 
+    text-transform: uppercase; 
+}
+
+/* --- THẺ XOAY DỌC PI/2 (THẾ HỆ > 3) --- */
+.vertical-node {
+    writing-mode: vertical-rl; /* Xếp chữ dọc */
+    transform: rotate(180deg); /* Đảo ngược từ dưới lên trên */
+    width: 60px !important; /* Chiều ngang hẹp lại */
+    min-height: 260px; /* Kéo dài chiều cao */
+    padding: 15px 10px;
+    text-align: center;
+    background-color: #fff9f5;
+}
+.vertical-node .node-name {
+    margin-bottom: 0;
+    margin-left: 5px; 
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+.vertical-node .node-spouse {
+    border-top: none;
+    border-left: 1px dashed #ccc; 
+    padding-top: 0;
+    padding-left: 6px;
+    margin-top: 0;
+    margin-left: 5px;
+}
