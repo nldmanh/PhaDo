@@ -313,7 +313,7 @@
     
     min-height: 220px !important; /* Kéo dài chiều cao */
     min-width: 45px !important;   /* Bóp hẹp chiều ngang */
-    padding: 12px 6px !important;
+    padding: 15px 8px !important;
     text-align: center;
 }
 .vertical-node .node-name {
@@ -330,16 +330,3 @@
     margin-top: 0;
     margin-left: 6px;
 }
-
-/*.person-node
-   position: absolute; 
-    border: 2px solid #333;
-    background-color: #fff;
-    padding: 6px 12px; Giảm lề trong thẻ
-    border-radius: 6px; Bo góc nhỏ lại
-    min-width: 130px; Giảm chiều rộng thẻ
-    text-align: center;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    transition: transform 0.2s;
-    background-clip: padding-box; Fix lỗi viền xám khi xuất PDF */
