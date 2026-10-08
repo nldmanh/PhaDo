@@ -21,15 +21,12 @@ jsonInput.addEventListener('change', function(event) {
     reader.onload = function(e) {
         try {
             const rawData = JSON.parse(e.target.result);
-            // Chuẩn hóa ép kiểu số nguyên
             const familyData = rawData.map(p => ({
                 ...p,
                 Generation: parseInt(p.Generation, 10) || 1 
             }));
-
-            console.log("Dữ liệu đã tải:", familyData);
+            
             window.familyTreeData = familyData; 
-
             startScreen.style.display = 'none';
             mainWorkspace.style.display = 'block';
 
@@ -37,15 +34,12 @@ jsonInput.addEventListener('change', function(event) {
             resetView(); 
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
-            console.error(error);
         }
     };
     reader.readAsText(file);
 });
 
-// ==========================================
-// CHỨC NĂNG ZOOM (Thu phóng) & PAN (Kéo thả)
-// ==========================================
+// --- ZOOM & PAN (Kéo thả) ---
 canvasContainer.addEventListener('wheel', (e) => {
     if(mainWorkspace.style.display === 'none') return;
     e.preventDefault();
@@ -85,16 +79,12 @@ function updateTransform() {
 }
 
 function resetView() {
-    scale = 1; translateX = 50; translateY = 50;
-    updateTransform();
+    scale = 1; translateX = 50; translateY = 50; updateTransform();
 }
 
-// ==========================================
-// CHỨC NĂNG TÌM KIẾM
-// ==========================================
+// --- TÌM KIẾM ---
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
-
 if (searchInput) {
     searchInput.addEventListener('input', function() {
         const val = this.value.trim().toLowerCase();
@@ -119,7 +109,6 @@ if (searchInput) {
         } else { searchResults.style.display = 'none'; }
     });
 }
-
 document.addEventListener('click', function(e) {
     if (searchResults && e.target !== searchInput) searchResults.style.display = 'none';
 });
@@ -139,23 +128,19 @@ function focusOnNode(id) {
 }
 
 // ==========================================
-// THUẬT TOÁN TỌA ĐỘ TỪ TRÊN XUỐNG DƯỚI (TOP-TO-BOTTOM)
+// THUẬT TOÁN BỐ CỤC (TRÊN XUỐNG DƯỚI) 
 // ==========================================
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
     drawNodes(data, positions);
-    // Timeout cho phép trình duyệt Render CSS, sau đó vẽ đường chỉ và ép chuẩn ISO
-    setTimeout(() => { 
-        applyISOCanvasAndCenter();
-        drawConnections(data); 
-    }, 100);
+    setTimeout(() => { drawConnections(data); }, 100);
 }
 
 function calculatePositions(people) {
     if (!people || people.length === 0) return {};
     const childrenMap = {};
     const hasFather = new Set();
-    const nodeDims = {};
+    const nodeDims = {}; // Lưu kích thước mô phỏng của thẻ để tính toán trước khi vẽ
     const depths = {};
 
     people.forEach(p => {
@@ -168,46 +153,45 @@ function calculatePositions(people) {
             }
         }
     });
-
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
 
-    // Bước 1: Tính toán Độ rộng (w) và Chiều cao (h) ảo của từng đối tượng
+    // Hàm dự đoán kích thước thẻ dựa trên luật CSS bạn yêu cầu
+    const getSimulatedDimensions = (person) => {
+        const isFounder = String(person.IsFounder) === '1';
+        const gen = parseInt(person.Generation, 10) || 1;
+        if (isFounder) {
+            if (gen === 1) return { w: 1040, h: 260 }; // Khối lượng 8x
+            return { w: 520, h: 140 }; // Khối lượng 4x
+        } else if (gen > 3) {
+            return { w: 55, h: 240 }; // Thẻ xoay dọc 90 độ
+        }
+        return { w: 140, h: 80 }; // Thẻ nằm ngang bình thường
+    };
+
+    people.forEach(p => { nodeDims[p.ID] = getSimulatedDimensions(p); });
+
+    // 1. Tính độ sâu (Trục Y)
     const maxHAtDepth = {};
     const calcDepth = (nodeId, d) => {
         depths[nodeId] = d;
-        const person = people.find(p => p.ID === String(nodeId));
-        
-        const isFounder = String(person.IsFounder) === '1';
-        const gen = parseInt(person.Generation, 10) || 1;
-        const isVertical = !isFounder && gen > 3;
-
-        let w = 160, h = 70; // Chuẩn mặc định
-        if (isFounder) {
-            if (gen === 1) { w = 1280; h = 560; } // Gen 1 (X8)
-            else { w = 640; h = 280; }            // Gen > 1 (X4)
-        } else if (isVertical) {
-            w = 60; h = 260; // Thẻ dọc hẹp ngang, cao dọc
-        }
-
-        nodeDims[nodeId] = { w, h };
+        const h = nodeDims[nodeId].h;
         if (!maxHAtDepth[d] || h > maxHAtDepth[d]) maxHAtDepth[d] = h;
         (childrenMap[nodeId] || []).forEach(child => calcDepth(child.ID, d + 1));
     };
     roots.forEach(r => calcDepth(r.ID, 0));
 
-    // Bước 2: Dàn lưới phân ranh giới trục Y
     const depthY = {};
     let currentY = 50;
-    const GAP_Y = 80; // Khoảng cách dây nối dọc
+    const GAP_Y = 120; // Khoảng cách dây nối dọc
     const maxDepth = Math.max(0, ...Object.values(depths));
     for (let i = 0; i <= maxDepth; i++) {
         depthY[i] = currentY;
-        currentY += (maxHAtDepth[i] || 70) + GAP_Y;
+        currentY += (maxHAtDepth[i] || 80) + GAP_Y;
     }
 
-    const GAP_X = 40; // Khoảng cách giữa các anh em
+    const GAP_X = 45; // Khoảng cách giữa các anh em đứng cạnh nhau
 
-    // Bước 3: Đệ quy tính toán trục X chống chồng lấp
+    // 2. Tính Tọa độ X bằng đệ quy (Contour Packing)
     const layoutNode = (nodeId) => {
         const d = depths[nodeId];
         const dims = nodeDims[nodeId];
@@ -246,23 +230,25 @@ function calculatePositions(people) {
             });
         });
 
-        // Đặt thẻ cha nằm giữa nhóm thẻ con
+        // Bố/mẹ nằm giữa trọng tâm khối con cái
         const firstChildId = children[0].ID;
         const lastChildId = children[children.length - 1].ID;
         const firstChildX = packedPositions[firstChildId];
         const lastChildX = packedPositions[lastChildId];
         const lastChildW = nodeDims[lastChildId].w;
 
-        const centerChildrenX = firstChildX + (lastChildX + lastChildW - firstChildX) / 2;
+        const centerChildrenX = (firstChildX + lastChildX + lastChildW) / 2;
         const parentX = centerChildrenX - (dims.w / 2);
 
         packedPositions[nodeId] = parentX;
+        
         if (!mergedContours[d]) mergedContours[d] = { min: parentX, max: parentX + dims.w };
         else {
             mergedContours[d].min = Math.min(mergedContours[d].min, parentX);
             mergedContours[d].max = Math.max(mergedContours[d].max, parentX + dims.w);
         }
 
+        // Bù trừ nếu X bị lùi về số âm
         const minX = Math.min(...Object.values(mergedContours).map(c => c.min));
         if (minX < 0) {
             const adjust = -minX;
@@ -293,7 +279,7 @@ function calculatePositions(people) {
         globalShift += shift;
 
         Object.keys(layout.positions).forEach(id => {
-            finalPositions[id] = { x: layout.positions[id] + globalShift, y: depthY[depths[id]], depth: depths[id], dims: nodeDims[id] };
+            finalPositions[id] = { x: layout.positions[id] + globalShift, y: depthY[depths[id]] };
         });
 
         Object.keys(layout.contours).forEach(level => {
@@ -303,7 +289,7 @@ function calculatePositions(people) {
         });
 
         if(idx === 0) {
-             globalShift = Math.max(globalShift, Math.max(...Object.values(layout.contours).map(c => c.max)) + GAP_X * 2);
+             globalShift = Math.max(globalShift, Math.max(...Object.values(layout.contours).map(c => c.max)) + GAP_X*2);
         }
     });
 
@@ -312,7 +298,6 @@ function calculatePositions(people) {
 
 function drawNodes(data, positions) {
     nodesContainer.innerHTML = ''; 
-    
     const getFatherName = (fatherId) => {
         if (!fatherId) return 'Cụ Tổ';
         const father = data.find((p) => String(p.ID) === String(fatherId));
@@ -338,11 +323,11 @@ function drawNodes(data, positions) {
         node.className = 'person-node';
         node.id = 'node-' + person.ID; 
         
+        // KIỂM TRA ĐIỀU KIỆN ĐỂ GÁN CLASS ĐÚNG LUẬT
         const isFounder = String(person.IsFounder) === '1';
         const gen = parseInt(person.Generation, 10) || 1;
         const isVertical = !isFounder && gen > 3;
 
-        // Phân lớp giao diện
         if (isFounder) {
             if (gen === 1) node.classList.add('founder-gen-1');
             else node.classList.add('founder-gen-n');
@@ -352,7 +337,6 @@ function drawNodes(data, positions) {
 
         node.style.left = pos.x + 'px';
         node.style.top = pos.y + 'px';
-
         const genderClass = (person.Gender && person.Gender.toLowerCase() === 'nữ') ? 'gender-female' : 'gender-male';
 
         let nodeHTML = '<div class="node-name ' + genderClass + '">' + person.Name + '</div>';
@@ -362,6 +346,7 @@ function drawNodes(data, positions) {
         
         node.innerHTML = nodeHTML;
         
+        // MODAL HIỂN THỊ THÔNG TIN KHI CLICK 
         const openModalHandler = function(e) {
             e.preventDefault(); 
             let html = `
@@ -385,13 +370,12 @@ function drawNodes(data, positions) {
                   <div class="form-group"><label>Con cái:</label><textarea readonly rows="2">${getChildrenNames(person.ChildID)}</textarea></div>`;
             }
 
-            html += `<div class="form-group"><label>Tiểu sử:</label><textarea readonly rows="4">${person.Biography || 'Không có thông tin tiểu sử.'}</textarea></div>
+            html += `
+                  <div class="form-group"><label>Tiểu sử:</label><textarea readonly rows="4">${person.Biography || 'Không có thông tin tiểu sử.'}</textarea></div>
                 </form></div></div>`;
-
             detailsModal.innerHTML = html;
             detailsModal.style.display = 'block';
-
-            document.getElementById('modalOverlay').addEventListener('click', function() { detailsModal.style.display = 'none'; detailsModal.innerHTML = ''; });
+            document.getElementById('modalOverlay').addEventListener('click', function() { detailsModal.style.display = 'none'; });
             document.getElementById('modalContent').addEventListener('click', function(e) { e.stopPropagation(); });
         };
 
@@ -399,9 +383,8 @@ function drawNodes(data, positions) {
         node.addEventListener('click', openModalHandler);
         nodesContainer.appendChild(node);
     });
-}
 
-function applyISOCanvasAndCenter() {
+    // 3. THUẬT TOÁN ĐÓNG KHUNG THEO CHUẨN ISO 216
     let maxX = 0, maxY = 0;
     document.querySelectorAll('.person-node').forEach(node => {
         const right = node.offsetLeft + node.offsetWidth;
@@ -410,19 +393,19 @@ function applyISOCanvasAndCenter() {
         if (bottom > maxY) maxY = bottom;
     });
 
-    const PADDING = 200; // Viền an toàn
+    const PADDING = 200; // Đệm viền xung quanh
     const targetW = maxX + PADDING;
     const targetH = maxY + PADDING;
-    const ISO_RATIO = 1.41421356; // Chuẩn A0, A1, A2...
+    const ISO_RATIO = Math.SQRT2; // ~1.4142
 
     let finalW = targetW;
     let finalH = targetH;
     
-    // Thuật toán ép Canvas về đúng Tỉ lệ Vàng ISO 216
-    if (targetW > targetH) { // Định dạng khổ Ngang (Landscape)
+    // So sánh và đẩy kích thước Canvas theo tỉ lệ vàng của khổ A0/A1
+    if (targetW > targetH) { 
         if (targetW / targetH < ISO_RATIO) finalW = targetH * ISO_RATIO;
         else finalH = targetW / ISO_RATIO;
-    } else { // Định dạng khổ Dọc (Portrait)
+    } else { 
         if (targetH / targetW < ISO_RATIO) finalH = targetW * ISO_RATIO;
         else finalW = targetH / ISO_RATIO;
     }
@@ -430,7 +413,7 @@ function applyISOCanvasAndCenter() {
     canvasArea.style.width = finalW + 'px';
     canvasArea.style.height = finalH + 'px';
 
-    // Dịch chuyển đẩy toàn bộ Node ra chính giữa tờ giấy (Căn lề)
+    // Căn giữa toàn bộ gia phả vào tâm tờ giấy ISO 
     const offsetX = (finalW - targetW + PADDING) / 2;
     const offsetY = (finalH - targetH + PADDING) / 2;
 
@@ -452,7 +435,7 @@ function drawConnections(data) {
             const childNode = document.getElementById('node-' + person.ID);
 
             if (fatherNode && childNode) {
-                // TỌA ĐỘ VẼ MÓC TỪ TRÊN XUỐNG DƯỚI
+                // Hướng đi: Đáy Cha -> Xuống -> Sang Ngang -> Xuống Đỉnh Con
                 const startX = fatherNode.offsetLeft + (fatherNode.offsetWidth / 2);
                 const startY = fatherNode.offsetTop + fatherNode.offsetHeight;
 
@@ -461,7 +444,6 @@ function drawConnections(data) {
 
                 const midY = startY + (endY - startY) / 2;
 
-                // Nối Móc vuông góc: Đi xuống giữa -> Rẽ sang ngang -> Đi xuống tiếp vào con
                 const pathData = 'M ' + startX + ' ' + startY + ' L ' + startX + ' ' + midY + ' L ' + endX + ' ' + midY + ' L ' + endX + ' ' + endY;
 
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -476,9 +458,7 @@ function drawConnections(data) {
     });
 }
 
-// ==========================================
-// CHỨC NĂNG XUẤT PDF
-// ==========================================
+// --- XUẤT PDF ---
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
@@ -503,17 +483,9 @@ function exportPDF() {
 
     const opt = {
         margin:       0,
-        filename:     'PhaDoGiaToc.pdf',
+        filename:     'PhaDoGiaToc_ISO.pdf',
         image:        { type: 'jpeg', quality: 1 }, 
-        html2canvas:  { 
-            scale: 3, 
-            useCORS: true, 
-            logging: false,
-            scrollX: 0, 
-            scrollY: 0,
-            width: pdfWidth, 
-            height: pdfHeight 
-        },
+        html2canvas:  { scale: 3, useCORS: true, logging: false, scrollX: 0, scrollY: 0, width: pdfWidth, height: pdfHeight },
         jsPDF: { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
     };
 
@@ -521,13 +493,15 @@ function exportPDF() {
         canvasArea.style.margin = ''; canvasArea.style.boxShadow = ''; 
         allNodes.forEach(node => { node.style.boxShadow = ''; });
         updateTransform(); 
-        exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#e74c3c'; exportBtn.disabled = false;
+        exportBtn.innerText = originalText;
+        exportBtn.style.backgroundColor = '#60d3f7';
+        exportBtn.disabled = false;
     }).catch(err => {
         console.error("Lỗi khi xuất PDF:", err);
-        alert('Có lỗi xảy ra khi xuất PDF. Dung lượng quá lớn có thể cần làm trên máy tính có RAM mạnh hơn.');
+        alert('Có lỗi xảy ra khi xuất PDF. Việc xuất file dung lượng quá lớn có thể cần làm trên máy tính có RAM mạnh hơn.');
         canvasArea.style.margin = ''; canvasArea.style.boxShadow = ''; 
         allNodes.forEach(node => { node.style.boxShadow = ''; });
         updateTransform();
-        exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#e74c3c'; exportBtn.disabled = false;
+        exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#60d3f7'; exportBtn.disabled = false;
     });
 }

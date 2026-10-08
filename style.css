@@ -278,77 +278,59 @@
     margin-top: 4px;
 }
 
-/* --- THIẾT KẾ THẺ THÔNG TIN CƠ BẢN --- */
-.person-node {
-    position: absolute; 
-    border: 2px solid #333;
-    background-color: #fff;
-    padding: 6px 12px;
-    border-radius: 6px;
-    width: 160px; /* Bắt buộc ấn định chiều rộng chuẩn là 160px */
-    text-align: center;
-    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
-    cursor: pointer;
-    background-clip: padding-box;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-/* --- CỤ TỔ ĐỜI 1 (TO GẤP 8 LẦN) --- */
+/* --- 1. ĐỊNH DẠNG CỤ TỔ ĐỜI 1 (TO GẤP 8 LẦN) --- */
 .founder-gen-1 {
-    width: 1280px !important; /* 160 * 8 */
-    min-height: 560px;
+    min-width: 1040px !important; /* Gấp 8 lần thẻ 130px */
+    padding: 48px 96px;
     border-width: 16px;
-    border-radius: 40px;
-    border-color: #c0392b; 
-    background-color: #fdf2e9; 
-    padding: 40px;
+    border-color: #c0392b;
+    background-color: #fdf2e9;
     z-index: 5;
 }
 .founder-gen-1 .node-name {
-    font-size: 112px; /* 14px * 8 */
-    color: #c0392b; 
-    text-transform: uppercase; 
+    font-size: 112px; /* Gấp 8 lần font 14px */
+    color: #c0392b;
+    text-transform: uppercase;
+    margin-bottom: 0;
 }
 
-/* --- CỤ TỔ ĐỜI > 1 (TO GẤP 4 LẦN) --- */
+/* --- 2. ĐỊNH DẠNG CỤ TỔ ĐỜI > 1 (TO GẤP 4 LẦN) --- */
 .founder-gen-n {
-    width: 640px !important; /* 160 * 4 */
-    min-height: 280px;
+    min-width: 520px !important; /* Gấp 4 lần */
+    padding: 24px 48px;
     border-width: 8px;
-    border-radius: 20px;
-    border-color: #d35400; 
-    background-color: #fdf2e9; 
-    padding: 20px;
+    border-color: #c0392b;
+    background-color: #fdf2e9;
     z-index: 5;
 }
 .founder-gen-n .node-name {
-    font-size: 56px; /* 14px * 4 */
-    color: #d35400; 
-    text-transform: uppercase; 
+    font-size: 56px; /* Gấp 4 lần */
+    color: #c0392b;
+    text-transform: uppercase;
+    margin-bottom: 0;
 }
 
-/* --- THẺ XOAY DỌC PI/2 (THẾ HỆ > 3) --- */
+/* --- 3. ĐỊNH DẠNG THẺ THẾ HỆ > 3 (XOAY DỌC 90 ĐỘ) --- */
 .vertical-node {
-    writing-mode: vertical-rl; /* Xếp chữ dọc */
-    transform: rotate(180deg); /* Đảo ngược từ dưới lên trên */
-    width: 60px !important; /* Chiều ngang hẹp lại */
-    min-height: 260px; /* Kéo dài chiều cao */
-    padding: 15px 10px;
+    /* Trục văn bản chạy dọc, góc quay ngược từ dưới lên */
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    
+    min-height: 240px; /* Bóp chiều ngang, kéo dài chiều cao */
+    min-width: 55px !important; 
+    padding: 15px 8px;
     text-align: center;
     background-color: #fff9f5;
 }
 .vertical-node .node-name {
     margin-bottom: 0;
-    margin-left: 5px; 
+    margin-left: 5px; /* Lề trái đóng vai trò lề dưới sau khi xoay */
     font-size: 14px;
     letter-spacing: 1px;
 }
 .vertical-node .node-spouse {
     border-top: none;
-    border-left: 1px dashed #ccc; 
+    border-left: 1px dashed #ccc; /* Nét đứt chuyển sang trục dọc */
     padding-top: 0;
     padding-left: 6px;
     margin-top: 0;
