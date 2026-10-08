@@ -278,3 +278,34 @@
     margin-top: 4px;
 }
 
+/* --- ĐỜI 1: CỤ TỔ (TO GẤP 8 LẦN) --- */
+.founder-gen-1 {
+    min-width: 520px !important; /* Gấp 4 lần thẻ 130px */
+    padding: 24px 48px;
+    border-width: 8px;
+    border-color: #c0392b;
+    background-color: #fdf2e9;
+    z-index: 5;
+}
+.founder-gen-1 .node-name {
+    font-size: 56px; /* Gấp 4 lần font 14px */
+    color: #c0392b;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
+
+/* --- ĐỜI > 1: TỔ CÁC CHI/NHÁNH (TO GẤP 2 LẦN) --- */
+.founder-gen-n {
+    min-width: 260px !important; /* Gấp 2 lần */
+    padding: 12px 24px;
+    border-width: 4px;
+    border-color: #c0392b;
+    background-color: #fdf2e9;
+    z-index: 5;
+}
+.founder-gen-n .node-name {
+    font-size: 28px; /* Gấp 2 lần */
+    color: #c0392b;
+    text-transform: uppercase;
+    margin-bottom: 0;
+}
