@@ -17,6 +17,7 @@ jsonInput.addEventListener('change', function(event) {
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = function(e) {
         try {
             const familyData = JSON.parse(e.target.result);
@@ -29,9 +30,10 @@ jsonInput.addEventListener('change', function(event) {
             mainWorkspace.style.display = 'block';
 
             renderFamilyTree(window.familyTreeData);
-            resetView(); 
+            // Hàm resetView() sẽ được tự động gọi ở cuối tiến trình vẽ để tìm Cụ Tổ
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
+            console.error(error);
         }
     };
     reader.readAsText(file);
@@ -75,8 +77,22 @@ window.addEventListener('mousemove', (e) => {
 function updateTransform() {
     canvasArea.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
 }
-function resetView() {
-    scale = 1; translateX = 50; translateY = 50; updateTransform();
+
+// BƯỚC 1. THIẾT LẬP LẠI NÚT "VỀ TRUNG TÂM" LẤY CỤ TỔ LÀM GỐC
+window.resetView = function() {
+    scale = 1; 
+    // Tìm thẻ Cụ Tổ đời 1 (QUỐC TRỊ)
+    const rootNode = document.querySelector('.founder-gen-1') || document.querySelector('.person-node');
+    if (rootNode) {
+        const containerRect = canvasContainer.getBoundingClientRect();
+        // Căn giữa theo X, và đặt Y cách đỉnh trên 80px để dễ nhìn
+        translateX = (containerRect.width / 2) - rootNode.offsetLeft - (rootNode.offsetWidth / 2);
+        translateY = 80 - rootNode.offsetTop; 
+    } else {
+        translateX = 50; 
+        translateY = 50; 
+    }
+    updateTransform();
 }
 
 // ==========================================
@@ -129,7 +145,6 @@ function focusOnNode(id) {
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
     drawNodes(data, positions);
-    // Tính năng nối dây (drawConnections) được gọi tự động sau khi căn lề ISO hoàn tất trong hàm drawNodes
 }
 
 function calculatePositions(people) {
@@ -154,6 +169,7 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
 
+    // BƯỚC 2. BÓP HẸP KÍCH THƯỚC MÔ PHỎNG ĐỂ GIẢM KHOẢNG CÁCH NGANG
     people.forEach(p => {
         const isFounder = String(p.IsFounder) === '1';
         const gen = parseInt(p.Generation, 10) || 1;
@@ -163,9 +179,9 @@ function calculatePositions(people) {
             if (gen === 1) nodeDims[p.ID] = { w: 560, h: 180 }; 
             else nodeDims[p.ID] = { w: 180, h: 70 }; 
         } else if (isVertical) {
-            nodeDims[p.ID] = { w: 60, h: 250 }; 
+            nodeDims[p.ID] = { w: 55, h: 250 }; // Giảm bớt w
         } else {
-            nodeDims[p.ID] = { w: 160, h: 70 }; 
+            nodeDims[p.ID] = { w: 150, h: 70 }; // Giảm bớt w (từ 160 xuống 150)
         }
     });
     
@@ -187,7 +203,7 @@ function calculatePositions(people) {
         currentY += (maxHAtDepth[i] || 70) + GAP_Y;
     }
 
-    const GAP_X = 35; 
+    const GAP_X = 20; // BƯỚC 2. GIẢM KHOẢNG TRỐNG GIỮA CÁC THẺ (từ 35 xuống 20)
     const INITIAL_X = 50;
 
     const layoutSubtree = (personId, depth) => {
@@ -397,13 +413,11 @@ function drawNodes(data, positions) {
         nodesContainer.appendChild(node);
     });
 
-    // BƯỚC 4: THUẬT TOÁN ĐO LƯỜNG, ÉP TỈ LỆ ISO VÀ CĂN GIỮA
     setTimeout(() => {
         let minX = Infinity, minY = Infinity;
         let maxX = 0, maxY = 0;
         const allNodes = document.querySelectorAll('.person-node');
         
-        // Quét đo ranh giới thực tế của toàn bộ cây
         allNodes.forEach(node => {
             if (node.offsetLeft < minX) minX = node.offsetLeft;
             if (node.offsetTop < minY) minY = node.offsetTop;
@@ -416,15 +430,14 @@ function drawNodes(data, positions) {
         const contentW = maxX - minX;
         const contentH = maxY - minY;
         
-        const PADDING = 250; // Luôn đảm bảo lề dư dả để in không lẹm
+        const PADDING = 250; 
         const targetW = contentW + PADDING;
         const targetH = contentH + PADDING;
-        const ISO_RATIO = 1.41421356; // Chuẩn A0, A1, A2
+        const ISO_RATIO = 1.41421356; 
 
         let finalW = targetW;
         let finalH = targetH;
         
-        // So sánh và nới rộng hệ trục để đạt chuẩn Tỉ lệ Vàng
         if (targetW > targetH) { 
             if (targetW / targetH < ISO_RATIO) finalW = targetH * ISO_RATIO;
             else finalH = targetW / ISO_RATIO;
@@ -436,7 +449,6 @@ function drawNodes(data, positions) {
         canvasArea.style.width = finalW + 'px';
         canvasArea.style.height = finalH + 'px';
 
-        // Tính độ lệch tâm và di chuyển toàn bộ thẻ vào chính giữa tờ giấy mới
         const targetMinX = (finalW - contentW) / 2;
         const targetMinY = (finalH - contentH) / 2;
         const shiftX = targetMinX - minX;
@@ -447,8 +459,20 @@ function drawNodes(data, positions) {
             node.style.top = (node.offsetTop + shiftY) + 'px';
         });
 
-        // Chỉ vẽ dây nối SAU KHI toàn bộ thẻ đã ổn định vị trí trung tâm
+        // BƯỚC 1. ÉP TẤT CẢ CỤ TỔ (ISFOUNDER = 1) VÀO CHÍNH GIỮA TRỤC DỌC CANVAS
+        const canvasCenterX = finalW / 2;
+        allNodes.forEach(node => {
+            const isFounder = node.classList.contains('founder-gen-1') || node.classList.contains('founder-gen-n');
+            if (isFounder) {
+                node.style.left = (canvasCenterX - node.offsetWidth / 2) + 'px';
+            }
+        });
+
         drawConnections(data);
+
+        // Tự động focus về Cụ Tổ ngay khi tải xong
+        window.resetView();
+
     }, 50);
 }
 
