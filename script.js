@@ -15,18 +15,24 @@ const canvasArea = document.getElementById('canvasArea');
 jsonInput.addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (!file) return;
+
     const reader = new FileReader();
+
     reader.onload = function(e) {
         try {
             const familyData = JSON.parse(e.target.result);
             window.familyTreeData = familyData.map(p => ({
-                ...p, Generation: parseInt(p.Generation, 10) || 1 
+                ...p,
+                Generation: parseInt(p.Generation, 10) || 1 
             }));
+
             startScreen.style.display = 'none';
             mainWorkspace.style.display = 'block';
+
             renderFamilyTree(window.familyTreeData);
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
+            console.error(error);
         }
     };
     reader.readAsText(file);
@@ -40,8 +46,10 @@ canvasContainer.addEventListener('wheel', (e) => {
     const rect = canvasContainer.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
+
     const newScale = Math.min(Math.max(0.1, scale + delta), 3); 
     const ratio = newScale / scale;
+    
     translateX = mouseX - (mouseX - translateX) * ratio;
     translateY = mouseY - (mouseY - translateY) * ratio;
     scale = newScale;
@@ -74,7 +82,8 @@ window.resetView = function() {
         translateX = (containerRect.width / 2) - rootNode.offsetLeft - (rootNode.offsetWidth / 2);
         translateY = 80 - rootNode.offsetTop; 
     } else {
-        translateX = 50; translateY = 50; 
+        translateX = 50; 
+        translateY = 50; 
     }
     updateTransform();
 }
@@ -86,6 +95,7 @@ if (searchInput) {
         const val = this.value.trim().toLowerCase();
         searchResults.innerHTML = '';
         if (!val || !window.familyTreeData) { searchResults.style.display = 'none'; return; }
+
         const matches = window.familyTreeData.filter(p => p.Name.toLowerCase().includes(val));
         if (matches.length > 0) {
             searchResults.style.display = 'block';
@@ -350,12 +360,7 @@ function drawNodes(data, positions) {
             nodeHTML += '<div class="node-spouse">' + person.Spouse + '</div>';
         }
         
-        // --- FIX LỖI XUẤT PDF: BỌC THÊM LỚP WRAPPER CHO THẺ DỌC ---
-        if (isVertical) {
-            node.innerHTML = '<div class="vertical-wrapper">' + nodeHTML + '</div>';
-        } else {
-            node.innerHTML = nodeHTML;
-        }
+        node.innerHTML = nodeHTML;
         
         const openModalHandler = function(e) {
             e.preventDefault(); 
@@ -411,6 +416,7 @@ function drawNodes(data, positions) {
         const rootNode = document.querySelector('.founder-gen-1') || allNodes[0];
         const rootCenterX = rootNode ? (rootNode.offsetLeft + rootNode.offsetWidth / 2) : ((minX + maxX) / 2);
 
+        // Căn cứ vào vị trí Cụ tổ để mở rộng khổ giấy sao cho cân bằng cả 2 bên
         const distLeft = rootCenterX - minX;
         const distRight = maxX - rootCenterX;
         const maxDist = Math.max(distLeft, distRight);
@@ -437,6 +443,7 @@ function drawNodes(data, positions) {
         canvasArea.style.width = finalW + 'px';
         canvasArea.style.height = finalH + 'px';
 
+        // Tịnh tiến bảo toàn nguyên vẹn tọa độ thuật toán để đặt Cụ tổ vào chính giữa
         const targetCenterX = finalW / 2;
         const targetMinY = (finalH - contentH) / 2;
         
@@ -508,10 +515,10 @@ function exportPDF() {
         filename:     'PhaDoGiaToc.pdf',
         image:        { type: 'jpeg', quality: 0.98 }, 
         html2canvas:  { 
-            scale: 1.5, 
+            scale: 2, // Giới hạn lại tỷ lệ để giải phóng RAM cho trình duyệt
             useCORS: true, 
             logging: false, 
-            backgroundColor: '#ffffff', 
+            backgroundColor: '#ffffff', // Ép định dạng nền trắng tuyệt đối chống lỗi đen PDF
             scrollX: 0, 
             scrollY: 0, 
             width: pdfWidth, 
