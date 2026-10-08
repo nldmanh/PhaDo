@@ -304,29 +304,38 @@
     margin-bottom: 5px;
 }
 
-/* --- BƯỚC 3: THẺ TỪ THẾ HỆ 4 TRỞ ĐI (XOAY DỌC TỪ DƯỚI LÊN TỚI) --- */
+/* --- BƯỚC 3: THẺ TỪ THẾ HỆ 4 TRỞ ĐI (XOAY DỌC TỪ DƯỚI LÊN TRÊN) --- */
 .vertical-node {
-    /* Đảo trục văn bản thành cột dọc */
     writing-mode: vertical-rl;
-    /* Xoay 180 độ để chữ chạy từ dưới lên trên như biểu đồ */
     transform: rotate(180deg);
-    
-    min-height: 220px !important; /* Kéo dài chiều cao */
-    min-width: 45px !important;   /* Bóp hẹp chiều ngang */
+    min-height: 220px !important;
+    min-width: 45px !important;
     padding: 15px 8px !important;
     text-align: center;
 }
+
+/* FIX 1: Giữ nguyên trạng thái xoay 180 độ khi Hover, chỉ phóng to */
+.vertical-node:hover {
+    transform: rotate(180deg) scale(1.05) !important;
+}
+
 .vertical-node .node-name {
     margin-bottom: 0;
-    margin-left: 6px; /* Vì đã xoay trục nên lề dưới đổi thành lề trái */
+    margin-left: 6px; 
     font-size: 14px;
     letter-spacing: 1px;
 }
+
 .vertical-node .node-spouse {
     border-top: none;
-    border-left: 1px dashed #ccc; /* Nét đứt ngang thành nét đứt dọc */
     padding-top: 0;
-    padding-left: 6px;
     margin-top: 0;
-    margin-left: 6px;
+    
+    /* FIX 2: Đổi left thành right để vạch kẻ lọt vào giữa Name và Spouse */
+    border-right: 1px dashed #ccc; 
+    padding-right: 6px;
+    margin-right: 6px;
+    border-left: none; 
+    padding-left: 0;
+    margin-left: 0;
 }

@@ -17,7 +17,6 @@ jsonInput.addEventListener('change', function(event) {
     if (!file) return;
 
     const reader = new FileReader();
-
     reader.onload = function(e) {
         try {
             const familyData = JSON.parse(e.target.result);
@@ -33,7 +32,6 @@ jsonInput.addEventListener('change', function(event) {
             resetView(); 
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
-            console.error(error);
         }
     };
     reader.readAsText(file);
@@ -126,12 +124,12 @@ function focusOnNode(id) {
 }
 
 // ==========================================
-// THUẬT TOÁN BỐ CỤC (KẾT HỢP NGANG & DỌC)
+// THUẬT TOÁN BỐ CỤC (KẾT HỢP DỌC/NGANG VÀ ÉP ISO 216)
 // ==========================================
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
     drawNodes(data, positions);
-    setTimeout(() => { drawConnections(data); }, 50);
+    // Tính năng nối dây (drawConnections) được gọi tự động sau khi căn lề ISO hoàn tất trong hàm drawNodes
 }
 
 function calculatePositions(people) {
@@ -156,23 +154,21 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
 
-    // BÁO CÁO CHIỀU RỘNG (W) VÀ CHIỀU CAO (H) ĐỂ THUẬT TOÁN TỰ ĐỘNG DÃN DÂY NỐI
     people.forEach(p => {
         const isFounder = String(p.IsFounder) === '1';
         const gen = parseInt(p.Generation, 10) || 1;
-        const isVertical = !isFounder && gen > 3; // Thế hệ 4 trở đi xoay dọc
+        const isVertical = !isFounder && gen > 3; 
         
         if (isFounder) {
-            if (gen === 1) nodeDims[p.ID] = { w: 560, h: 180 }; // 4x
-            else nodeDims[p.ID] = { w: 180, h: 70 }; // 1.2x
+            if (gen === 1) nodeDims[p.ID] = { w: 560, h: 180 }; 
+            else nodeDims[p.ID] = { w: 180, h: 70 }; 
         } else if (isVertical) {
-            nodeDims[p.ID] = { w: 60, h: 250 }; // Thẻ xoay dọc: hẹp ngang, dài dọc
+            nodeDims[p.ID] = { w: 60, h: 250 }; 
         } else {
-            nodeDims[p.ID] = { w: 160, h: 70 }; // Thẻ ngang bình thường
+            nodeDims[p.ID] = { w: 160, h: 70 }; 
         }
     });
     
-    // Tự động tính toán Tọa độ Y theo độ cao lớn nhất của từng thế hệ (Tránh đứt dây)
     const maxHAtDepth = {};
     const calcDepth = (nodeId, d) => {
         depths[nodeId] = d;
@@ -184,19 +180,18 @@ function calculatePositions(people) {
 
     const depthY = {};
     let currentY = 50;
-    const GAP_Y = 80; // Độ dài của thanh nối dọc
+    const GAP_Y = 80; 
     const maxDepth = Math.max(0, ...Object.values(depths));
     for (let i = 0; i <= maxDepth; i++) {
         depthY[i] = currentY;
         currentY += (maxHAtDepth[i] || 70) + GAP_Y;
     }
 
-    const GAP_X = 35; // Khoảng trống bề ngang
+    const GAP_X = 35; 
     const INITIAL_X = 50;
 
     const layoutSubtree = (personId, depth) => {
         const myWidth = nodeDims[personId].w;
-        // Gắn Y tự động dựa vào bộ tính depthY phía trên
         const subPos = { [personId]: { x: 0, y: depthY[depth] } };
         const subContours = { [depth]: { min: 0, max: myWidth } };
         const children = childrenMap[personId] || [];
@@ -317,8 +312,6 @@ function calculatePositions(people) {
 
 function drawNodes(data, positions) {
     nodesContainer.innerHTML = ''; 
-    let maxX = 0;
-    let maxY = 0;
     
     const getFatherName = (fatherId) => {
         if (!fatherId) return 'Cụ Tổ';
@@ -345,7 +338,6 @@ function drawNodes(data, positions) {
         node.className = 'person-node';
         node.id = 'node-' + person.ID; 
         
-        // KIỂM TRA ĐIỀU KIỆN XOAY VÀ KÍCH THƯỚC
         const isFounder = String(person.IsFounder) === '1';
         const gen = parseInt(person.Generation, 10) || 1;
         const isVertical = !isFounder && gen > 3;
@@ -354,7 +346,6 @@ function drawNodes(data, positions) {
             if (gen === 1) node.classList.add('founder-gen-1');
             else node.classList.add('founder-gen-n');
         } else if (isVertical) {
-            // Thêm class xoay dọc cho thế hệ 4 trở đi
             node.classList.add('vertical-node');
         }
 
@@ -404,16 +395,61 @@ function drawNodes(data, positions) {
         node.addEventListener('contextmenu', openModalHandler);
         node.addEventListener('click', openModalHandler);
         nodesContainer.appendChild(node);
+    });
+
+    // BƯỚC 4: THUẬT TOÁN ĐO LƯỜNG, ÉP TỈ LỆ ISO VÀ CĂN GIỮA
+    setTimeout(() => {
+        let minX = Infinity, minY = Infinity;
+        let maxX = 0, maxY = 0;
+        const allNodes = document.querySelectorAll('.person-node');
         
-        setTimeout(() => {
+        // Quét đo ranh giới thực tế của toàn bộ cây
+        allNodes.forEach(node => {
+            if (node.offsetLeft < minX) minX = node.offsetLeft;
+            if (node.offsetTop < minY) minY = node.offsetTop;
             const right = node.offsetLeft + node.offsetWidth;
             const bottom = node.offsetTop + node.offsetHeight;
             if (right > maxX) maxX = right;
             if (bottom > maxY) maxY = bottom;
-            canvasArea.style.width = (maxX + 250) + 'px';
-            canvasArea.style.height = (maxY + 250) + 'px';
-        }, 10);
-    });
+        });
+
+        const contentW = maxX - minX;
+        const contentH = maxY - minY;
+        
+        const PADDING = 250; // Luôn đảm bảo lề dư dả để in không lẹm
+        const targetW = contentW + PADDING;
+        const targetH = contentH + PADDING;
+        const ISO_RATIO = 1.41421356; // Chuẩn A0, A1, A2
+
+        let finalW = targetW;
+        let finalH = targetH;
+        
+        // So sánh và nới rộng hệ trục để đạt chuẩn Tỉ lệ Vàng
+        if (targetW > targetH) { 
+            if (targetW / targetH < ISO_RATIO) finalW = targetH * ISO_RATIO;
+            else finalH = targetW / ISO_RATIO;
+        } else { 
+            if (targetH / targetW < ISO_RATIO) finalH = targetW * ISO_RATIO;
+            else finalW = targetH / ISO_RATIO;
+        }
+
+        canvasArea.style.width = finalW + 'px';
+        canvasArea.style.height = finalH + 'px';
+
+        // Tính độ lệch tâm và di chuyển toàn bộ thẻ vào chính giữa tờ giấy mới
+        const targetMinX = (finalW - contentW) / 2;
+        const targetMinY = (finalH - contentH) / 2;
+        const shiftX = targetMinX - minX;
+        const shiftY = targetMinY - minY;
+
+        allNodes.forEach(node => {
+            node.style.left = (node.offsetLeft + shiftX) + 'px';
+            node.style.top = (node.offsetTop + shiftY) + 'px';
+        });
+
+        // Chỉ vẽ dây nối SAU KHI toàn bộ thẻ đã ổn định vị trí trung tâm
+        drawConnections(data);
+    }, 50);
 }
 
 function drawConnections(data) {
@@ -426,7 +462,6 @@ function drawConnections(data) {
             const childNode = document.getElementById('node-' + person.ID);
 
             if (fatherNode && childNode) {
-                // Tọa độ nối dây bất chấp thẻ nằm dọc hay ngang do ta bám vào offsetWidth/Height
                 const startX = fatherNode.offsetLeft + (fatherNode.offsetWidth / 2);
                 const startY = fatherNode.offsetTop + fatherNode.offsetHeight;
                 const endX = childNode.offsetLeft + (childNode.offsetWidth / 2);
