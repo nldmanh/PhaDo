@@ -291,15 +291,42 @@
     margin-bottom: 8px;
 }
 
-/* --- BƯỚC 2: ĐỜI > 1 - TỔ CHI/NHÁNH (TO GẤP 2 LẦN, GIỮ NGUYÊN MÀU) --- */
+/* --- ĐỜI > 1: TỔ CHI/NHÁNH (Sửa lại chỉ to gấp 1.2 lần) --- */
 .founder-gen-n {
-    min-width: 260px !important; /* 130px * 2 */
-    padding: 12px 24px !important;
-    border-width: 4px !important;
-    border-radius: 12px !important;
+    min-width: 156px !important; /* 130px * 1.2 */
+    padding: 8px 16px !important;
+    border-width: 3px !important;
+    border-radius: 8px !important;
     z-index: 5;
 }
 .founder-gen-n .node-name {
-    font-size: 28px !important; /* 14px * 2 */
-    margin-bottom: 6px;
+    font-size: 17px !important; /* 14px * 1.2 */
+    margin-bottom: 5px;
+}
+
+/* --- BƯỚC 3: THẺ TỪ THẾ HỆ 4 TRỞ ĐI (XOAY DỌC TỪ DƯỚI LÊN TỚI) --- */
+.vertical-node {
+    /* Đảo trục văn bản thành cột dọc */
+    writing-mode: vertical-rl;
+    /* Xoay 180 độ để chữ chạy từ dưới lên trên như biểu đồ */
+    transform: rotate(180deg);
+    
+    min-height: 220px !important; /* Kéo dài chiều cao */
+    min-width: 45px !important;   /* Bóp hẹp chiều ngang */
+    padding: 15px 8px !important;
+    text-align: center;
+}
+.vertical-node .node-name {
+    margin-bottom: 0;
+    margin-left: 6px; /* Vì đã xoay trục nên lề dưới đổi thành lề trái */
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+.vertical-node .node-spouse {
+    border-top: none;
+    border-left: 1px dashed #ccc; /* Nét đứt ngang thành nét đứt dọc */
+    padding-top: 0;
+    padding-left: 6px;
+    margin-top: 0;
+    margin-left: 6px;
 }

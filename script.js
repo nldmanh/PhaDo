@@ -126,7 +126,7 @@ function focusOnNode(id) {
 }
 
 // ==========================================
-// THUẬT TOÁN BỐ CỤC (TÍCH HỢP ĐO KÍCH THƯỚC 4X / 2X)
+// THUẬT TOÁN BỐ CỤC (KẾT HỢP NGANG & DỌC)
 // ==========================================
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
@@ -140,7 +140,8 @@ function calculatePositions(people) {
     const allIds = new Set(people.map(p => String(p.ID)));
     const childrenMap = {};
     const hasFather = new Set();
-    const nodeDims = {}; // Khai báo bộ nhớ ảo
+    const nodeDims = {}; 
+    const depths = {};
     
     people.forEach(p => {
         if (p.FatherID && allIds.has(String(p.FatherID))) {
@@ -155,27 +156,48 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
 
-    // BÁO CÁO KÍCH THƯỚC: Thuật toán cần biết kích thước thẻ để né nhau
+    // BÁO CÁO CHIỀU RỘNG (W) VÀ CHIỀU CAO (H) ĐỂ THUẬT TOÁN TỰ ĐỘNG DÃN DÂY NỐI
     people.forEach(p => {
         const isFounder = String(p.IsFounder) === '1';
         const gen = parseInt(p.Generation, 10) || 1;
+        const isVertical = !isFounder && gen > 3; // Thế hệ 4 trở đi xoay dọc
         
         if (isFounder) {
-            if (gen === 1) nodeDims[p.ID] = { w: 560 }; // Kích thước mô phỏng thẻ 4x
-            else nodeDims[p.ID] = { w: 300 }; // Kích thước mô phỏng thẻ 2x
+            if (gen === 1) nodeDims[p.ID] = { w: 560, h: 180 }; // 4x
+            else nodeDims[p.ID] = { w: 180, h: 70 }; // 1.2x
+        } else if (isVertical) {
+            nodeDims[p.ID] = { w: 60, h: 250 }; // Thẻ xoay dọc: hẹp ngang, dài dọc
         } else {
-            nodeDims[p.ID] = { w: 160 }; // Thẻ bình thường
+            nodeDims[p.ID] = { w: 160, h: 70 }; // Thẻ ngang bình thường
         }
     });
     
-    const distanceY = 180; // Trục Y: Khoảng cách giữa Cha và Con
-    const GAP_X = 40;      // Trục X: Khoảng cách trống tối thiểu giữa các thẻ
+    // Tự động tính toán Tọa độ Y theo độ cao lớn nhất của từng thế hệ (Tránh đứt dây)
+    const maxHAtDepth = {};
+    const calcDepth = (nodeId, d) => {
+        depths[nodeId] = d;
+        const h = nodeDims[nodeId].h;
+        if (!maxHAtDepth[d] || h > maxHAtDepth[d]) maxHAtDepth[d] = h;
+        (childrenMap[nodeId] || []).forEach(child => calcDepth(child.ID, d + 1));
+    };
+    roots.forEach(r => calcDepth(r.ID, 0));
+
+    const depthY = {};
+    let currentY = 50;
+    const GAP_Y = 80; // Độ dài của thanh nối dọc
+    const maxDepth = Math.max(0, ...Object.values(depths));
+    for (let i = 0; i <= maxDepth; i++) {
+        depthY[i] = currentY;
+        currentY += (maxHAtDepth[i] || 70) + GAP_Y;
+    }
+
+    const GAP_X = 35; // Khoảng trống bề ngang
     const INITIAL_X = 50;
-    const INITIAL_Y = 50;
 
     const layoutSubtree = (personId, depth) => {
         const myWidth = nodeDims[personId].w;
-        const subPos = { [personId]: { x: 0, y: depth * distanceY + INITIAL_Y } };
+        // Gắn Y tự động dựa vào bộ tính depthY phía trên
+        const subPos = { [personId]: { x: 0, y: depthY[depth] } };
         const subContours = { [depth]: { min: 0, max: myWidth } };
         const children = childrenMap[personId] || [];
         
@@ -191,7 +213,6 @@ function calculatePositions(people) {
                 Object.keys(childLayout.contours).forEach(depthStr => {
                     const d = parseInt(depthStr, 10);
                     if (cumulativeContours[d] && childLayout.contours[d]) {
-                        // So sánh đường viền để tạo khoảng trống GAP_X
                         const overlapShift = cumulativeContours[d].max + GAP_X - childLayout.contours[d].min;
                         if (overlapShift > shift) shift = overlapShift;
                     }
@@ -213,7 +234,6 @@ function calculatePositions(people) {
             });
         });
 
-        // Căn giữa thẻ Cha dựa theo tổng chiều rộng của đám Con
         const firstChildId = children[0].ID;
         const lastChildId = children[children.length - 1].ID;
         const firstChildX = packedChildrenPos[firstChildId].x;
@@ -221,15 +241,14 @@ function calculatePositions(people) {
         const lastChildW = nodeDims[lastChildId].w;
         
         const centerChildrenX = (firstChildX + lastChildX + lastChildW) / 2;
-        const targetParentX = centerChildrenX - (myWidth / 2); // Đưa cha vào giữa
+        const targetParentX = centerChildrenX - (myWidth / 2); 
         
-        const childrenShift = -targetParentX; // Lùi các con lại để cha nằm ở X=0
+        const childrenShift = -targetParentX; 
 
         Object.keys(packedChildrenPos).forEach(id => {
             subPos[id] = { x: packedChildrenPos[id].x + childrenShift, y: packedChildrenPos[id].y };
         });
         
-        // Gộp viền của Cha và Con
         Object.keys(cumulativeContours).forEach(depthStr => {
             const d = parseInt(depthStr, 10);
             const minVal = cumulativeContours[d].min + childrenShift;
@@ -242,7 +261,6 @@ function calculatePositions(people) {
             }
         });
         
-        // Cập nhật viền tại tầng của Cha
         if (!subContours[depth]) subContours[depth] = { min: 0, max: myWidth };
         else {
             subContours[depth].min = Math.min(subContours[depth].min, 0);
@@ -327,13 +345,17 @@ function drawNodes(data, positions) {
         node.className = 'person-node';
         node.id = 'node-' + person.ID; 
         
-        // KIỂM TRA GEN ĐỂ DÁN CLASS 4x HAY 2x
+        // KIỂM TRA ĐIỀU KIỆN XOAY VÀ KÍCH THƯỚC
         const isFounder = String(person.IsFounder) === '1';
         const gen = parseInt(person.Generation, 10) || 1;
+        const isVertical = !isFounder && gen > 3;
 
         if (isFounder) {
             if (gen === 1) node.classList.add('founder-gen-1');
             else node.classList.add('founder-gen-n');
+        } else if (isVertical) {
+            // Thêm class xoay dọc cho thế hệ 4 trở đi
+            node.classList.add('vertical-node');
         }
 
         node.style.left = pos.x + 'px';
@@ -383,7 +405,6 @@ function drawNodes(data, positions) {
         node.addEventListener('click', openModalHandler);
         nodesContainer.appendChild(node);
         
-        // Đo đạc kích thước Canvas để chứa đủ cây
         setTimeout(() => {
             const right = node.offsetLeft + node.offsetWidth;
             const bottom = node.offsetTop + node.offsetHeight;
@@ -405,6 +426,7 @@ function drawConnections(data) {
             const childNode = document.getElementById('node-' + person.ID);
 
             if (fatherNode && childNode) {
+                // Tọa độ nối dây bất chấp thẻ nằm dọc hay ngang do ta bám vào offsetWidth/Height
                 const startX = fatherNode.offsetLeft + (fatherNode.offsetWidth / 2);
                 const startY = fatherNode.offsetTop + fatherNode.offsetHeight;
                 const endX = childNode.offsetLeft + (childNode.offsetWidth / 2);
