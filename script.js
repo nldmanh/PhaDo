@@ -30,7 +30,6 @@ jsonInput.addEventListener('change', function(event) {
             mainWorkspace.style.display = 'block';
 
             renderFamilyTree(window.familyTreeData);
-            // Hàm resetView() sẽ được tự động gọi ở cuối tiến trình vẽ để tìm Cụ Tổ
         } catch (error) {
             alert("Lỗi: File JSON không đúng định dạng. Vui lòng kiểm tra lại!");
             console.error(error);
@@ -39,9 +38,6 @@ jsonInput.addEventListener('change', function(event) {
     reader.readAsText(file);
 });
 
-// ==========================================
-// CHỨC NĂNG ZOOM & PAN
-// ==========================================
 canvasContainer.addEventListener('wheel', (e) => {
     if(mainWorkspace.style.display === 'none') return;
     e.preventDefault();
@@ -78,14 +74,11 @@ function updateTransform() {
     canvasArea.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
 }
 
-// BƯỚC 1. THIẾT LẬP LẠI NÚT "VỀ TRUNG TÂM" LẤY CỤ TỔ LÀM GỐC
 window.resetView = function() {
     scale = 1; 
-    // Tìm thẻ Cụ Tổ đời 1 (QUỐC TRỊ)
     const rootNode = document.querySelector('.founder-gen-1') || document.querySelector('.person-node');
     if (rootNode) {
         const containerRect = canvasContainer.getBoundingClientRect();
-        // Căn giữa theo X, và đặt Y cách đỉnh trên 80px để dễ nhìn
         translateX = (containerRect.width / 2) - rootNode.offsetLeft - (rootNode.offsetWidth / 2);
         translateY = 80 - rootNode.offsetTop; 
     } else {
@@ -95,9 +88,6 @@ window.resetView = function() {
     updateTransform();
 }
 
-// ==========================================
-// TÌM KIẾM
-// ==========================================
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
 if (searchInput) {
@@ -139,9 +129,6 @@ function focusOnNode(id) {
     }
 }
 
-// ==========================================
-// THUẬT TOÁN BỐ CỤC (KẾT HỢP DỌC/NGANG VÀ ÉP ISO 216)
-// ==========================================
 function renderFamilyTree(data) {
     const positions = calculatePositions(data);
     drawNodes(data, positions);
@@ -169,7 +156,6 @@ function calculatePositions(people) {
 
     const roots = people.filter(p => !hasFather.has(String(p.ID)));
 
-    // BƯỚC 2. BÓP HẸP KÍCH THƯỚC MÔ PHỎNG ĐỂ GIẢM KHOẢNG CÁCH NGANG
     people.forEach(p => {
         const isFounder = String(p.IsFounder) === '1';
         const gen = parseInt(p.Generation, 10) || 1;
@@ -179,9 +165,9 @@ function calculatePositions(people) {
             if (gen === 1) nodeDims[p.ID] = { w: 560, h: 180 }; 
             else nodeDims[p.ID] = { w: 180, h: 70 }; 
         } else if (isVertical) {
-            nodeDims[p.ID] = { w: 55, h: 250 }; // Giảm bớt w
+            nodeDims[p.ID] = { w: 55, h: 250 }; 
         } else {
-            nodeDims[p.ID] = { w: 150, h: 70 }; // Giảm bớt w (từ 160 xuống 150)
+            nodeDims[p.ID] = { w: 150, h: 70 }; 
         }
     });
     
@@ -203,7 +189,7 @@ function calculatePositions(people) {
         currentY += (maxHAtDepth[i] || 70) + GAP_Y;
     }
 
-    const GAP_X = 20; // BƯỚC 2. GIẢM KHOẢNG TRỐNG GIỮA CÁC THẺ (từ 35 xuống 20)
+    const GAP_X = 20; 
     const INITIAL_X = 50;
 
     const layoutSubtree = (personId, depth) => {
@@ -427,7 +413,15 @@ function drawNodes(data, positions) {
             if (bottom > maxY) maxY = bottom;
         });
 
-        const contentW = maxX - minX;
+        const rootNode = document.querySelector('.founder-gen-1') || allNodes[0];
+        const rootCenterX = rootNode ? (rootNode.offsetLeft + rootNode.offsetWidth / 2) : ((minX + maxX) / 2);
+
+        // Căn cứ vào vị trí Cụ tổ để mở rộng khổ giấy sao cho cân bằng cả 2 bên
+        const distLeft = rootCenterX - minX;
+        const distRight = maxX - rootCenterX;
+        const maxDist = Math.max(distLeft, distRight);
+        
+        const contentW = maxDist * 2; 
         const contentH = maxY - minY;
         
         const PADDING = 250; 
@@ -449,9 +443,11 @@ function drawNodes(data, positions) {
         canvasArea.style.width = finalW + 'px';
         canvasArea.style.height = finalH + 'px';
 
-        const targetMinX = (finalW - contentW) / 2;
+        // Tịnh tiến bảo toàn nguyên vẹn tọa độ thuật toán để đặt Cụ tổ vào chính giữa
+        const targetCenterX = finalW / 2;
         const targetMinY = (finalH - contentH) / 2;
-        const shiftX = targetMinX - minX;
+        
+        const shiftX = targetCenterX - rootCenterX;
         const shiftY = targetMinY - minY;
 
         allNodes.forEach(node => {
@@ -459,18 +455,7 @@ function drawNodes(data, positions) {
             node.style.top = (node.offsetTop + shiftY) + 'px';
         });
 
-        // BƯỚC 1. ÉP TẤT CẢ CỤ TỔ (ISFOUNDER = 1) VÀO CHÍNH GIỮA TRỤC DỌC CANVAS
-        const canvasCenterX = finalW / 2;
-        allNodes.forEach(node => {
-            const isFounder = node.classList.contains('founder-gen-1') || node.classList.contains('founder-gen-n');
-            if (isFounder) {
-                node.style.left = (canvasCenterX - node.offsetWidth / 2) + 'px';
-            }
-        });
-
         drawConnections(data);
-
-        // Tự động focus về Cụ Tổ ngay khi tải xong
         window.resetView();
 
     }, 50);
@@ -506,7 +491,6 @@ function drawConnections(data) {
     });
 }
 
-// --- XUẤT PDF ---
 function exportPDF() {
     const exportBtn = document.getElementById('exportBtn');
     const originalText = exportBtn.innerText;
@@ -529,8 +513,17 @@ function exportPDF() {
     const opt = {
         margin:       0,
         filename:     'PhaDoGiaToc.pdf',
-        image:        { type: 'jpeg', quality: 1 }, 
-        html2canvas:  { scale: 3, useCORS: true, logging: false, scrollX: 0, scrollY: 0, width: pdfWidth, height: pdfHeight },
+        image:        { type: 'jpeg', quality: 0.98 }, 
+        html2canvas:  { 
+            scale: 1.5, // Giới hạn lại tỷ lệ để giải phóng RAM cho trình duyệt
+            useCORS: true, 
+            logging: false, 
+            backgroundColor: '#ffffff', // Ép định dạng nền trắng tuyệt đối chống lỗi đen PDF
+            scrollX: 0, 
+            scrollY: 0, 
+            width: pdfWidth, 
+            height: pdfHeight 
+        },
         jsPDF: { unit: 'px', format: [pdfWidth, pdfHeight], orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait' } 
     };
 
@@ -540,7 +533,7 @@ function exportPDF() {
         updateTransform(); 
         exportBtn.innerText = originalText; exportBtn.style.backgroundColor = '#60d3f7'; exportBtn.disabled = false;
     }).catch(err => {
-        console.error("Lỗi khi xuất PDF:", err); alert('Có lỗi xảy ra khi xuất PDF.');
+        console.error("Lỗi khi xuất PDF:", err); alert('Có lỗi xảy ra khi xuất PDF. Việc xuất file dung lượng quá lớn có thể cần làm trên thiết bị cấu hình cao hơn.');
         canvasArea.style.margin = ''; canvasArea.style.boxShadow = ''; 
         allNodes.forEach(node => { node.style.boxShadow = ''; });
         updateTransform();
